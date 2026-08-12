@@ -55,3 +55,6 @@ data/raw/
 models/*.pt
 models/*.h5
 models/*.onnx
+
+# Vercel CLI local link
+.vercel

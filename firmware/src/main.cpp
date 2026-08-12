@@ -64,13 +64,15 @@ void applyFan(int on) {
   digitalWrite(PIN_FAN, fanState ? HIGH : LOW);
 }
 
+// 키트 RGB는 공통양극(active-low): LOW=점등, HIGH=소등
+// (이전 HIGH=점등이면 OFF↔WHITE가 서로 바뀜)
 void applyRgb(int r, int g, int b) {
   rgbR = constrain(r, 0, 255);
   rgbG = constrain(g, 0, 255);
   rgbB = constrain(b, 0, 255);
-  digitalWrite(PIN_RGB_R, rgbR > 0 ? HIGH : LOW);
-  digitalWrite(PIN_RGB_G, rgbG > 0 ? HIGH : LOW);
-  digitalWrite(PIN_RGB_B, rgbB > 0 ? HIGH : LOW);
+  digitalWrite(PIN_RGB_R, rgbR > 0 ? LOW : HIGH);
+  digitalWrite(PIN_RGB_G, rgbG > 0 ? LOW : HIGH);
+  digitalWrite(PIN_RGB_B, rgbB > 0 ? LOW : HIGH);
 }
 
 void applyBuzzer(int on) {
