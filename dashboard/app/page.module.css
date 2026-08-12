@@ -201,11 +201,19 @@
   align-items: center;
   justify-content: center;
   pointer-events: none;
+  padding-top: 0.15rem;
+}
+
+.ringIcon {
+  display: grid;
+  place-items: center;
+  margin-bottom: 0.2rem;
+  opacity: 0.9;
 }
 
 .ringCenter strong {
   font-family: var(--font-mono);
-  font-size: 1.35rem;
+  font-size: 1.28rem;
   font-weight: 650;
   letter-spacing: -0.03em;
   line-height: 1;
@@ -219,7 +227,7 @@
 }
 
 .ringCenter em {
-  margin-top: 0.35rem;
+  margin-top: 0.28rem;
   font-style: normal;
   font-size: 0.78rem;
   color: var(--muted);
@@ -275,254 +283,45 @@
 
 .chartWrap {
   width: 100%;
-  height: 240px;
+  height: 260px;
   border-radius: 18px;
   border: 1px solid var(--line);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), #f8fafc);
   padding: 0.4rem 0.2rem 0.2rem;
 }
 
-.stage {
-  margin-top: 0.9rem;
-  border-radius: 18px;
-  border: 1px solid var(--line);
-  background: linear-gradient(145deg, #ffffff 0%, #f5f7fa 100%);
-  padding: 1rem;
-  min-height: 150px;
-  display: grid;
-  grid-template-columns: 1.15fr 0.85fr;
-  gap: 0.9rem;
-  align-items: center;
-}
-
-@media (max-width: 640px) {
-  .stage {
-    grid-template-columns: 1fr;
-  }
-}
-
-.lcdScreen {
-  position: relative;
-  border-radius: 14px;
-  background: linear-gradient(180deg, #0b1220, #111827);
-  color: #9af0c2;
-  font-family: var(--font-mono);
-  padding: 1.15rem 1rem 0.9rem;
-  box-shadow:
-    inset 0 0 0 1px rgba(154, 240, 194, 0.14),
-    0 12px 28px rgba(15, 23, 42, 0.12);
-  min-height: 86px;
-}
-
-.lcdBadge {
-  position: absolute;
-  top: 0.45rem;
-  right: 0.55rem;
-  font-size: 0.62rem;
-  color: rgba(154, 240, 194, 0.55);
-  letter-spacing: 0.06em;
-}
-
-.lcdScreen p {
-  margin: 0;
-  letter-spacing: 0.05em;
-  white-space: pre;
-  line-height: 1.45;
-}
-
-.deviceViz {
+.controlStack {
   display: flex;
   flex-direction: column;
-  gap: 0.7rem;
-  align-items: flex-start;
+  gap: 1.15rem;
 }
 
-.rgbOrb {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  border: 1px solid var(--line);
-  background: radial-gradient(circle at 35% 30%, #fff, #e2e8f0 70%);
-  display: grid;
-  place-items: center;
-  transition: box-shadow 0.3s ease, transform 0.25s ease;
-}
-
-.rgbOrb span {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: currentColor;
-  opacity: 0.35;
-  transition: opacity 0.25s ease;
-}
-
-.rgbOrbOn {
-  transform: scale(1.04);
-  box-shadow: 0 0 28px color-mix(in srgb, currentColor 55%, transparent);
-  animation: glowBreath 2.4s ease infinite;
-}
-
-.rgbOrbOn span {
-  opacity: 1;
-}
-
-.ledRow {
-  display: flex;
-  gap: 0.45rem;
-}
-
-.led {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  border: 1px solid rgba(15, 23, 42, 0.12);
-  background: #e2e8f0;
-  transition: box-shadow 0.25s ease, background 0.25s ease, transform 0.2s ease;
-}
-
-.ledOn {
-  transform: scale(1.1);
-  box-shadow: 0 0 14px currentColor;
-}
-
-.fanBadge {
+.safetyBtn {
+  width: 100%;
+  min-height: 56px;
+  border-radius: 16px;
+  border: 1px solid rgba(225, 29, 72, 0.18);
+  background: #fff;
+  color: var(--rose);
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
-  padding: 0.4rem 0.75rem;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  background: #fff;
-  color: var(--muted);
-  font-size: 0.8rem;
-  font-weight: 650;
-}
-
-.fanBadgeOn {
-  color: var(--accent);
-  border-color: rgba(13, 148, 136, 0.35);
-  background: #f0fdfa;
-}
-
-.fanIcon {
-  width: 16px;
-  height: 16px;
-}
-
-.fanIcon.on {
-  animation: spinFan 0.85s linear infinite;
-}
-
-.btnGrid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.65rem;
-}
-
-.btn {
-  position: relative;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  min-height: 64px;
-  padding: 0.8rem 0.85rem;
-  background: #fff;
-  color: var(--text);
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
   justify-content: center;
-  gap: 0.12rem;
+  gap: 0.5rem;
+  font-weight: 700;
   cursor: pointer;
   transition:
     transform 0.16s ease,
-    box-shadow 0.2s ease,
-    border-color 0.2s ease,
-    background 0.2s ease;
-  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.03);
+    background 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
-.btn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  border-color: var(--line-strong);
+.safetyBtn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: #fff1f2;
   box-shadow: var(--shadow-sm);
 }
 
-.btn:active:not(:disabled) {
-  transform: translateY(1px) scale(0.985);
-}
-
-.btn:disabled {
+.safetyBtn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
-}
-
-.btnActive {
-  border-color: rgba(15, 118, 110, 0.42);
-  background: linear-gradient(180deg, #f0fdfa, #ffffff);
-  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.12);
-}
-
-.btnDanger:hover:not(:disabled) {
-  border-color: rgba(225, 29, 72, 0.35);
-}
-
-.btnLabel {
-  font-size: 0.72rem;
-  color: var(--muted);
-  letter-spacing: 0.02em;
-  font-weight: 600;
-}
-
-.btnTitle {
-  font-size: 1.05rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-}
-
-.rgbRed {
-  border-color: rgba(225, 29, 72, 0.22);
-}
-.rgbGreen {
-  border-color: rgba(5, 150, 105, 0.22);
-}
-.rgbBlue {
-  border-color: rgba(37, 99, 235, 0.22);
-}
-.rgbWhite {
-  border-color: rgba(148, 163, 184, 0.45);
-  background: linear-gradient(180deg, #ffffff, #f8fafc);
-}
-
-.lcdRow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.6rem;
-  margin-top: 0.75rem;
-}
-
-.lcdInput {
-  flex: 1;
-  min-width: 180px;
-  border-radius: 14px;
-  border: 1px solid var(--line);
-  background: #fff;
-  color: var(--text);
-  padding: 0.85rem 0.95rem;
-  outline: none;
-}
-
-.lcdInput:focus {
-  border-color: rgba(15, 118, 110, 0.5);
-  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.12);
-}
-
-.warn {
-  margin: 0.7rem 0 0;
-  color: var(--amber);
-  font-size: 0.8rem;
-}
-
-.sectionGap {
-  margin-top: 1rem;
 }

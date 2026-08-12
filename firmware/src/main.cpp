@@ -14,9 +14,10 @@ static const int PIN_CDS = 39;
 static const int PIN_SDA = 21;
 static const int PIN_SCL = 22;
 static const int PIN_FAN = 2;
-static const int PIN_RGB_R = 14;  // was 15 (실측: B핀이 Red)
-static const int PIN_RGB_G = 15;  // was 13 (실측: R핀이 Green)
-static const int PIN_RGB_B = 13;  // was 14 (실측: G핀이 Blue)
+// 실측 최종: R→녹, G→파, B→빨 순환 오류 보정 (공통양극 active-low)
+static const int PIN_RGB_R = 13;
+static const int PIN_RGB_G = 14;
+static const int PIN_RGB_B = 15;
 static const int PIN_KEY = 19;
 static const int PIN_BUZZER = 12;
 
