@@ -11,6 +11,58 @@
   animation: sproutIn 0.75s var(--ease-spring) both;
 }
 
+.habitat3d {
+  position: relative;
+  height: 280px;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  overflow: hidden;
+  margin-bottom: 1rem;
+  background: #eef4ee;
+  box-shadow: var(--shadow-sm);
+  animation: sproutIn 0.75s var(--ease-spring) both;
+}
+
+.habitat3d canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.habitat3dSkeleton {
+  height: 280px;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  margin-bottom: 1rem;
+  background:
+    linear-gradient(90deg, #eef4ee 25%, #f7faf7 50%, #eef4ee 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+.habitatChips {
+  position: absolute;
+  left: 0.75rem;
+  right: 0.75rem;
+  bottom: 0.7rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  pointer-events: none;
+}
+
+.habitatChips span {
+  padding: 0.28rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid rgba(28, 56, 36, 0.12);
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(8px);
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
 .habitatSvg,
 .actuatorSvg {
   display: block;
