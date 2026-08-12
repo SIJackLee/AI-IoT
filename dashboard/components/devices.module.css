@@ -13,7 +13,7 @@
 
 .blockLabel {
   font-size: 0.84rem;
-  font-weight: 720;
+  font-weight: 740;
   letter-spacing: -0.02em;
 }
 
@@ -21,7 +21,7 @@
 .stateOff {
   font-style: normal;
   font-size: 0.74rem;
-  font-weight: 700;
+  font-weight: 740;
 }
 
 .stateOn {
@@ -39,15 +39,15 @@
   border-radius: 18px;
   border: 1px solid var(--line);
   background:
-    radial-gradient(140px 90px at 50% 35%, rgba(13, 148, 136, 0.08), transparent 65%),
-    linear-gradient(180deg, #ffffff, #f5f8fb);
+    radial-gradient(150px 90px at 50% 35%, rgba(47, 158, 99, 0.12), transparent 65%),
+    linear-gradient(180deg, #ffffff, #eef6ef);
   color: var(--muted);
   cursor: pointer;
   display: grid;
   place-items: center;
   overflow: hidden;
   transition:
-    transform 0.18s ease,
+    transform 0.18s var(--ease-spring),
     border-color 0.2s ease,
     color 0.2s ease,
     box-shadow 0.25s ease;
@@ -69,18 +69,18 @@
 
 .fanBtnOn {
   color: var(--accent);
-  border-color: rgba(13, 148, 136, 0.4);
+  border-color: rgba(31, 122, 77, 0.4);
   background:
-    radial-gradient(160px 100px at 50% 40%, rgba(13, 148, 136, 0.16), transparent 62%),
-    linear-gradient(180deg, #f0fdfa, #ffffff);
-  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.1);
+    radial-gradient(170px 110px at 50% 40%, rgba(47, 158, 99, 0.2), transparent 62%),
+    linear-gradient(180deg, #e8f7ee, #ffffff);
+  box-shadow: 0 0 0 3px rgba(47, 158, 99, 0.12);
 }
 
 .fanHalo,
 .fanHalo2 {
   position: absolute;
   border-radius: 50%;
-  border: 1px dashed rgba(13, 148, 136, 0.28);
+  border: 1px dashed rgba(31, 122, 77, 0.3);
   opacity: 0;
   pointer-events: none;
 }
@@ -94,17 +94,17 @@
   width: 112px;
   height: 112px;
   border-style: solid;
-  border-color: rgba(13, 148, 136, 0.12);
+  border-color: rgba(31, 122, 77, 0.14);
 }
 
 .fanBtnOn .fanHalo,
 .fanBtnOn .fanHalo2 {
   opacity: 1;
-  animation: airflow 1.6s ease-out infinite;
+  animation: airflow 1.55s ease-out infinite;
 }
 
 .fanBtnOn .fanHalo2 {
-  animation-delay: 0.55s;
+  animation-delay: 0.5s;
 }
 
 .fanIcon {
@@ -112,7 +112,7 @@
   height: 48px;
   position: relative;
   z-index: 1;
-  filter: drop-shadow(0 6px 12px rgba(13, 148, 136, 0.18));
+  filter: drop-shadow(0 6px 12px rgba(31, 122, 77, 0.2));
 }
 
 .spin {
@@ -137,24 +137,24 @@
   height: 92px;
   border-radius: 50%;
   border: 1px solid var(--line);
-  background: radial-gradient(circle at 35% 30%, #fff, #e2e8f0 72%);
+  background: radial-gradient(circle at 35% 30%, #fff, #dfe8e1 72%);
   display: grid;
   place-items: center;
-  color: #94a3b8;
+  color: #7a8f82;
   transition:
     box-shadow 0.35s ease,
-    transform 0.25s ease,
+    transform 0.25s var(--ease-spring),
     color 0.25s ease,
     background 0.35s ease;
 }
 
 .rgbOrbOn {
-  color: #0f172a;
+  color: #14251a;
   background:
-    radial-gradient(circle at 35% 28%, #fff 0%, color-mix(in srgb, currentColor 55%, #fff) 42%, color-mix(in srgb, currentColor 80%, #111) 100%);
+    radial-gradient(circle at 35% 28%, #fff 0%, color-mix(in srgb, currentColor 55%, #fff) 42%, color-mix(in srgb, currentColor 78%, #111) 100%);
   box-shadow:
     0 0 0 4px color-mix(in srgb, currentColor 18%, transparent),
-    0 0 36px color-mix(in srgb, currentColor 55%, transparent);
+    0 0 34px color-mix(in srgb, currentColor 50%, transparent);
   animation: glowBreath 2.2s ease infinite;
 }
 
@@ -165,7 +165,7 @@
 }
 
 .swatch {
-  --swatch: #94a3b8;
+  --swatch: #7a8f82;
   min-height: 66px;
   border-radius: 16px;
   border: 1px solid var(--line);
@@ -178,7 +178,7 @@
   cursor: pointer;
   color: var(--text);
   transition:
-    transform 0.16s ease,
+    transform 0.18s var(--ease-spring),
     box-shadow 0.2s ease,
     border-color 0.2s ease,
     background 0.2s ease;
@@ -189,15 +189,13 @@
   height: 18px;
   border-radius: 50%;
   background: var(--swatch);
-  box-shadow:
-    inset 0 0 0 1px rgba(15, 23, 42, 0.08),
-    0 0 0 0 color-mix(in srgb, var(--swatch) 40%, transparent);
-  transition: box-shadow 0.25s ease, transform 0.2s ease;
+  box-shadow: inset 0 0 0 1px rgba(28, 56, 36, 0.1);
+  transition: box-shadow 0.25s ease, transform 0.2s var(--ease-spring);
 }
 
 .swatch span {
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 740;
   color: var(--muted);
 }
 
@@ -216,15 +214,15 @@
 }
 
 .swatchActive {
-  border-color: color-mix(in srgb, var(--swatch) 55%, #94a3b8);
-  background: color-mix(in srgb, var(--swatch) 8%, #fff);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--swatch) 20%, transparent);
+  border-color: color-mix(in srgb, var(--swatch) 55%, #7a8f82);
+  background: color-mix(in srgb, var(--swatch) 10%, #fff);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--swatch) 18%, transparent);
 }
 
 .swatchActive i {
-  transform: scale(1.12);
+  transform: scale(1.14);
   box-shadow:
-    inset 0 0 0 1px rgba(15, 23, 42, 0.08),
+    inset 0 0 0 1px rgba(28, 56, 36, 0.08),
     0 0 14px color-mix(in srgb, var(--swatch) 55%, transparent);
 }
 
@@ -239,15 +237,15 @@
   border-radius: 18px;
   border: 1px solid var(--line);
   background:
-    radial-gradient(140px 80px at 50% 40%, rgba(217, 119, 6, 0.08), transparent 65%),
-    linear-gradient(180deg, #ffffff, #f8fafc);
+    radial-gradient(140px 80px at 50% 40%, rgba(201, 133, 26, 0.1), transparent 65%),
+    linear-gradient(180deg, #ffffff, #f5f8f3);
   color: var(--muted);
   cursor: pointer;
   display: grid;
   place-items: center;
   overflow: hidden;
   transition:
-    transform 0.16s ease,
+    transform 0.16s var(--ease-spring),
     color 0.2s ease,
     border-color 0.2s ease;
 }
@@ -255,7 +253,7 @@
 .buzzerBtn:hover:not(:disabled) {
   transform: translateY(-2px);
   color: var(--amber);
-  border-color: rgba(217, 119, 6, 0.3);
+  border-color: rgba(201, 133, 26, 0.35);
 }
 
 .buzzerBtn:disabled {
@@ -272,8 +270,8 @@
 
 .buzzerPing {
   color: var(--amber);
-  border-color: rgba(217, 119, 6, 0.45);
-  animation: buzzerPulse 0.42s ease;
+  border-color: rgba(201, 133, 26, 0.45);
+  animation: buzzerPulse 0.42s var(--ease-spring);
 }
 
 .ripple {
@@ -281,7 +279,7 @@
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  border: 2px solid rgba(217, 119, 6, 0.35);
+  border: 2px solid rgba(201, 133, 26, 0.35);
   opacity: 0;
   pointer-events: none;
 }
@@ -297,13 +295,13 @@
 .lcdScreen {
   position: relative;
   border-radius: 14px;
-  background: linear-gradient(180deg, #071018, #0f172a 55%, #111827);
+  background: linear-gradient(180deg, #0d1a12, #132418 55%, #16301c);
   color: #9af0c2;
   font-family: var(--font-mono);
   padding: 1.05rem 1rem 0.9rem;
   box-shadow:
-    inset 0 0 0 1px rgba(154, 240, 194, 0.16),
-    0 14px 32px rgba(15, 23, 42, 0.14);
+    inset 0 0 0 1px rgba(154, 240, 194, 0.18),
+    0 14px 30px rgba(20, 37, 26, 0.16);
   min-height: 82px;
   overflow: hidden;
 }
@@ -316,8 +314,8 @@
     to bottom,
     transparent 0,
     transparent 2px,
-    rgba(154, 240, 194, 0.035) 2px,
-    rgba(154, 240, 194, 0.035) 3px
+    rgba(154, 240, 194, 0.04) 2px,
+    rgba(154, 240, 194, 0.04) 3px
   );
   pointer-events: none;
 }
@@ -328,7 +326,7 @@
   left: 0;
   right: 0;
   height: 28%;
-  background: linear-gradient(180deg, transparent, rgba(154, 240, 194, 0.08), transparent);
+  background: linear-gradient(180deg, transparent, rgba(154, 240, 194, 0.1), transparent);
   animation: lcdScan 2.8s linear infinite;
   pointer-events: none;
 }
@@ -340,7 +338,7 @@
   line-height: 1.45;
   position: relative;
   z-index: 1;
-  text-shadow: 0 0 10px rgba(154, 240, 194, 0.25);
+  text-shadow: 0 0 10px rgba(154, 240, 194, 0.28);
 }
 
 .cursor {
@@ -373,8 +371,8 @@
 }
 
 .lcdInput:focus {
-  border-color: rgba(15, 118, 110, 0.5);
-  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.12);
+  border-color: rgba(31, 122, 77, 0.5);
+  box-shadow: 0 0 0 3px rgba(47, 158, 99, 0.14);
 }
 
 .iconBtn {
@@ -388,7 +386,7 @@
   place-items: center;
   cursor: pointer;
   transition:
-    transform 0.16s ease,
+    transform 0.16s var(--ease-spring),
     background 0.2s ease,
     border-color 0.2s ease,
     box-shadow 0.2s ease;
@@ -397,7 +395,7 @@
 .iconBtn:hover:not(:disabled) {
   transform: translateY(-1px);
   border-color: var(--line-strong);
-  background: #f8fafc;
+  background: #f3f8f3;
   box-shadow: var(--shadow-sm);
 }
 
@@ -440,7 +438,7 @@
     transform: scale(0.95);
   }
   70% {
-    transform: scale(1.02);
+    transform: scale(1.03);
   }
   100% {
     transform: scale(1);

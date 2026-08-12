@@ -5,7 +5,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "캠틱 AI-IoT 스마트팜",
-  description: "ESP32 스마트팜 원격 모니터링 · 제어 콘솔",
+  description: "캠틱 ESP32 스마트팜 Agri Motion 콘솔",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

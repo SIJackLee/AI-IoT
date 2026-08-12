@@ -213,9 +213,9 @@ export default function HomePage() {
     <main className={styles.shell}>
       <header className={styles.hero}>
         <div className={styles.brandBlock}>
-          <p className={styles.eyebrow}>Camtic · Smart Agriculture</p>
+          <p className={styles.eyebrow}>Camtic · Agri Motion</p>
           <h1 className={styles.brand}>AI-IoT 스마트팜</h1>
-          <p className={styles.tagline}>장치별 원격 인터페이스 · 실시간 모니터링</p>
+          <p className={styles.tagline}>생육 환경 모니터링 · 장치 원격 제어</p>
         </div>
         <div className={styles.heroAside}>
           <span className={styles.livePill}>
@@ -234,8 +234,8 @@ export default function HomePage() {
         <section className={`${styles.panel} ${styles.panelMain}`}>
           <div className={styles.panelHead}>
             <div>
-              <h2>모니터링</h2>
-              <p className={styles.panelHint}>온·습도 추이와 현장 센서</p>
+              <h2>생육 모니터링</h2>
+              <p className={styles.panelHint}>온·습도 추이와 토양·조도 센서</p>
             </div>
           </div>
 
@@ -244,7 +244,7 @@ export default function HomePage() {
               value={temp}
               unit="°C"
               label="온도"
-              color="#0d9488"
+              color="#1f7a4d"
               max={50}
               icon={<Thermometer size={16} strokeWidth={2.2} />}
             />
@@ -252,13 +252,13 @@ export default function HomePage() {
               value={hum}
               unit="%"
               label="습도"
-              color="#2563eb"
+              color="#3b82c4"
               max={100}
               icon={<Droplets size={16} strokeWidth={2.2} />}
             />
             <div className={styles.sideMeters}>
-              <BarMeter label="토양 수분 (raw)" value={data?.soil ?? null} color="#16a34a" />
-              <BarMeter label="조도 CDS (raw)" value={data?.cds ?? null} color="#d97706" />
+              <BarMeter label="토양 수분 (raw)" value={data?.soil ?? null} color="#8b6b4a" />
+              <BarMeter label="조도 CDS (raw)" value={data?.cds ?? null} color="#e0a100" />
             </div>
           </div>
 
@@ -267,12 +267,12 @@ export default function HomePage() {
               <AreaChart data={history}>
                 <defs>
                   <linearGradient id="gTemp" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#0d9488" stopOpacity={0.35} />
-                    <stop offset="100%" stopColor="#0d9488" stopOpacity={0} />
+                    <stop offset="0%" stopColor="#1f7a4d" stopOpacity={0.38} />
+                    <stop offset="100%" stopColor="#1f7a4d" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="gHum" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#2563eb" stopOpacity={0.28} />
-                    <stop offset="100%" stopColor="#2563eb" stopOpacity={0} />
+                    <stop offset="0%" stopColor="#3b82c4" stopOpacity={0.3} />
+                    <stop offset="100%" stopColor="#3b82c4" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid stroke="rgba(15,23,42,0.06)" vertical={false} />
@@ -291,11 +291,12 @@ export default function HomePage() {
                   type="monotone"
                   dataKey="temp"
                   name="온도 °C"
-                  stroke="#0d9488"
+                  stroke="#1f7a4d"
                   fill="url(#gTemp)"
                   strokeWidth={2.6}
                   isAnimationActive
-                  animationDuration={700}
+                  animationDuration={850}
+                  animationEasing="ease-out"
                   dot={false}
                   activeDot={{ r: 4 }}
                 />
@@ -303,11 +304,12 @@ export default function HomePage() {
                   type="monotone"
                   dataKey="hum"
                   name="습도 %"
-                  stroke="#2563eb"
+                  stroke="#3b82c4"
                   fill="url(#gHum)"
                   strokeWidth={2.2}
                   isAnimationActive
-                  animationDuration={700}
+                  animationDuration={850}
+                  animationEasing="ease-out"
                   dot={false}
                   activeDot={{ r: 4 }}
                 />
@@ -320,7 +322,7 @@ export default function HomePage() {
           <div className={styles.panelHead}>
             <div>
               <h2>장치 제어</h2>
-              <p className={styles.panelHint}>아이콘으로 바로 조작</p>
+              <p className={styles.panelHint}>현장 액추에이터를 바로 조작</p>
             </div>
           </div>
 

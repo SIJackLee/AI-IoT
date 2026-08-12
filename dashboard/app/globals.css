@@ -1,25 +1,32 @@
 :root {
-  --bg-0: #f5f7fa;
-  --bg-1: #e8eef4;
-  --panel: rgba(255, 255, 255, 0.72);
+  /* Agri Motion — living field console (avoid cream/terracotta cliché) */
+  --bg-0: #f3f7f2;
+  --bg-1: #e7efe6;
+  --panel: rgba(255, 255, 255, 0.78);
   --panel-solid: #ffffff;
-  --line: rgba(15, 23, 42, 0.07);
-  --line-strong: rgba(15, 23, 42, 0.14);
-  --text: #0f172a;
-  --muted: #64748b;
-  --accent: #0f766e;
-  --accent-2: #0d9488;
-  --rose: #e11d48;
-  --amber: #d97706;
-  --blue: #2563eb;
-  --green: #059669;
-  --shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
-  --shadow-sm: 0 10px 28px rgba(15, 23, 42, 0.06);
+  --line: rgba(28, 56, 36, 0.1);
+  --line-strong: rgba(28, 56, 36, 0.18);
+  --text: #14251a;
+  --muted: #5d7264;
+  --accent: #1f7a4d;
+  --accent-2: #2f9e63;
+  --leaf: #3cb371;
+  --soil: #8b6b4a;
+  --sky: #3b82c4;
+  --sun: #e0a100;
+  --rose: #d1435b;
+  --amber: #c9851a;
+  --blue: #3b82c4;
+  --green: #1f7a4d;
+  --shadow: 0 22px 50px rgba(28, 56, 36, 0.1);
+  --shadow-sm: 0 10px 26px rgba(28, 56, 36, 0.07);
   --radius: 24px;
   --font-ko: "Pretendard Variable", Pretendard, "Apple SD Gothic Neo", "Noto Sans KR",
     sans-serif;
   --font-en: var(--font-geist-sans), var(--font-ko);
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --ease-spring: cubic-bezier(0.22, 1.2, 0.36, 1);
+  --ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 * {
@@ -34,10 +41,10 @@ body {
   font-family: var(--font-ko);
   letter-spacing: -0.01em;
   background:
-    radial-gradient(980px 560px at 6% -12%, rgba(13, 148, 136, 0.16), transparent 58%),
-    radial-gradient(820px 500px at 100% 0%, rgba(37, 99, 235, 0.1), transparent 52%),
-    radial-gradient(700px 420px at 78% 110%, rgba(245, 158, 11, 0.08), transparent 48%),
-    linear-gradient(165deg, #fcfdff 0%, var(--bg-0) 45%, var(--bg-1) 100%);
+    radial-gradient(900px 520px at 8% -10%, rgba(47, 158, 99, 0.18), transparent 55%),
+    radial-gradient(780px 460px at 96% 0%, rgba(59, 130, 196, 0.12), transparent 50%),
+    radial-gradient(640px 400px at 70% 110%, rgba(232, 161, 0, 0.1), transparent 48%),
+    linear-gradient(165deg, #f8fbf7 0%, var(--bg-0) 42%, var(--bg-1) 100%);
   background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
 }
@@ -47,22 +54,24 @@ body::before {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  opacity: 0.32;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.4'/%3E%3C/svg%3E");
+  opacity: 0.28;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E");
   mix-blend-mode: soft-light;
   z-index: 0;
 }
 
+/* soft field orbs */
 body::after {
   content: "";
   position: fixed;
-  inset: -20%;
+  inset: -15%;
   pointer-events: none;
   z-index: 0;
   background:
-    radial-gradient(circle at 20% 30%, rgba(13, 148, 136, 0.08), transparent 28%),
-    radial-gradient(circle at 80% 20%, rgba(37, 99, 235, 0.06), transparent 26%);
-  animation: ambienceDrift 18s ease-in-out infinite alternate;
+    radial-gradient(circle at 18% 28%, rgba(60, 179, 113, 0.12), transparent 26%),
+    radial-gradient(circle at 82% 18%, rgba(59, 130, 196, 0.09), transparent 24%),
+    radial-gradient(circle at 55% 80%, rgba(232, 161, 0, 0.08), transparent 22%);
+  animation: fieldDrift 16s var(--ease-soft) infinite alternate;
 }
 
 button,
@@ -73,7 +82,7 @@ input {
 @keyframes riseIn {
   from {
     opacity: 0;
-    transform: translateY(18px) scale(0.985);
+    transform: translateY(20px) scale(0.97);
   }
   to {
     opacity: 1;
@@ -81,17 +90,24 @@ input {
   }
 }
 
+@keyframes fieldDrift {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(-2.5%, 1.8%, 0) scale(1.04);
+  }
+}
+
 @keyframes pulseDot {
   0%,
   100% {
     transform: scale(1);
-    opacity: 1;
-    box-shadow: 0 0 0 0 rgba(5, 150, 105, 0.45);
+    box-shadow: 0 0 0 0 rgba(31, 122, 77, 0.4);
   }
   50% {
-    transform: scale(1.2);
-    opacity: 0.7;
-    box-shadow: 0 0 0 8px rgba(5, 150, 105, 0);
+    transform: scale(1.15);
+    box-shadow: 0 0 0 8px rgba(31, 122, 77, 0);
   }
 }
 
@@ -108,17 +124,29 @@ input {
     transform: scale(1);
   }
   50% {
-    filter: drop-shadow(0 0 18px currentColor);
-    transform: scale(1.03);
+    filter: drop-shadow(0 0 16px currentColor);
+    transform: scale(1.04);
   }
 }
 
-@keyframes ambienceDrift {
+@keyframes leafSway {
+  0%,
+  100% {
+    transform: rotate(-4deg) translateY(0);
+  }
+  50% {
+    transform: rotate(4deg) translateY(-2px);
+  }
+}
+
+@keyframes growUp {
   from {
-    transform: translate3d(0, 0, 0);
+    transform: scaleY(0.2);
+    opacity: 0.4;
   }
   to {
-    transform: translate3d(-2%, 1.5%, 0);
+    transform: scaleY(1);
+    opacity: 1;
   }
 }
 
@@ -137,7 +165,7 @@ input {
     transform: translateY(0);
   }
   50% {
-    transform: translateY(-3px);
+    transform: translateY(-4px);
   }
 }
 
@@ -155,12 +183,23 @@ input {
     opacity: 0;
     transform: scale(0.55);
   }
-  35% {
-    opacity: 0.55;
+  40% {
+    opacity: 0.5;
   }
   100% {
     opacity: 0;
-    transform: scale(1.55);
+    transform: scale(1.6);
+  }
+}
+
+@keyframes sproutIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 
