@@ -1,0 +1,45 @@
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+dist/
+build/
+
+# Env & secrets
+.env
+.env.local
+*.pem
+*.key
+credentials.json
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Arduino build
+arduino/**/build/
+*.hex
+*.elf
+
+# Logs / temp
+*.log
+tmp/
+temp/
+
+# Large local models / data (add selectively if needed)
+data/raw/
+models/*.pt
+models/*.h5
+models/*.onnx
