@@ -1,0 +1,323 @@
+.shell {
+  position: relative;
+  z-index: 1;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 4rem;
+  animation: riseIn 0.65s ease both;
+}
+
+.hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.brand {
+  margin: 0;
+  font-family: var(--font-display), serif;
+  font-size: clamp(2.1rem, 4vw, 3rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--text);
+}
+
+.tagline {
+  margin: 0.35rem 0 0;
+  color: var(--muted);
+}
+
+.livePill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--panel-solid);
+  box-shadow: var(--shadow);
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.liveDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--green);
+  animation: pulseDot 1.6s ease infinite;
+}
+
+.liveDot.bad {
+  background: var(--rose);
+  animation: none;
+}
+
+.meta {
+  width: 100%;
+  margin: 0.25rem 0 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.error {
+  margin: 0.4rem 0 0;
+  color: var(--rose);
+  font-size: 0.9rem;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 960px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.panel {
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--panel);
+  backdrop-filter: blur(16px);
+  box-shadow: var(--shadow);
+  padding: 1.15rem 1.2rem 1.3rem;
+  animation: riseIn 0.7s ease both;
+}
+
+.panel h2 {
+  margin: 0 0 0.25rem;
+  font-family: var(--font-display), serif;
+  font-size: 1.35rem;
+}
+
+.panelHint {
+  margin: 0 0 1rem;
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.chartWrap {
+  width: 100%;
+  height: 280px;
+}
+
+.gaugeGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.gaugeCard {
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 0.85rem 0.9rem;
+}
+
+.gaugeLabel {
+  display: block;
+  color: var(--muted);
+  font-size: 0.78rem;
+  margin-bottom: 0.2rem;
+}
+
+.gaugeValue {
+  font-family: var(--font-display), serif;
+  font-size: 1.45rem;
+  font-weight: 650;
+}
+
+.stage {
+  margin-top: 0.85rem;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+  padding: 1rem;
+  min-height: 150px;
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 0.85rem;
+  align-items: center;
+}
+
+.lcdScreen {
+  border-radius: 12px;
+  background: #0b1220;
+  color: #9af0c2;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  padding: 0.85rem 1rem;
+  box-shadow: inset 0 0 0 1px rgba(154, 240, 194, 0.15);
+  min-height: 74px;
+}
+
+.lcdScreen p {
+  margin: 0;
+  letter-spacing: 0.04em;
+  white-space: pre;
+}
+
+.deviceViz {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  align-items: flex-start;
+}
+
+.ledRow {
+  display: flex;
+  gap: 0.45rem;
+}
+
+.led {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: #e2e8f0;
+  transition: box-shadow 0.25s ease, background 0.25s ease, transform 0.2s ease;
+}
+
+.ledOn {
+  transform: scale(1.08);
+  box-shadow: 0 0 16px currentColor;
+}
+
+.fanBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.fanSpin {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  border-top-color: transparent;
+}
+
+.fanSpin.on {
+  animation: spinFan 0.7s linear infinite;
+}
+
+.btnGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.btn {
+  position: relative;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  min-height: 62px;
+  padding: 0.8rem 0.85rem;
+  background: #fff;
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.15rem;
+  cursor: pointer;
+  transition:
+    transform 0.16s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease,
+    background 0.2s ease;
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.03);
+}
+
+.btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(1px) scale(0.985);
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btnActive {
+  border-color: rgba(15, 118, 110, 0.45);
+  background: linear-gradient(180deg, #f0fdfa, #ffffff);
+  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.12);
+}
+
+.btnLabel {
+  font-size: 0.72rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.btnTitle {
+  font-family: var(--font-display), serif;
+  font-size: 1.05rem;
+  font-weight: 650;
+}
+
+.rgbRed {
+  border-color: rgba(225, 29, 72, 0.25);
+}
+.rgbGreen {
+  border-color: rgba(5, 150, 105, 0.25);
+}
+.rgbBlue {
+  border-color: rgba(37, 99, 235, 0.25);
+}
+
+.lcdRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+}
+
+.lcdInput {
+  flex: 1;
+  min-width: 180px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--text);
+  padding: 0.8rem 0.95rem;
+  outline: none;
+}
+
+.lcdInput:focus {
+  border-color: rgba(15, 118, 110, 0.5);
+  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.12);
+}
+
+.warn {
+  margin: 0.7rem 0 0;
+  color: var(--amber);
+  font-size: 0.8rem;
+}
+
+.sectionGap {
+  margin-top: 1rem;
+}

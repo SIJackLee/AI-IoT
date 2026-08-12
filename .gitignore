@@ -13,9 +13,18 @@ build/
 # Env & secrets
 .env
 .env.local
+dashboard/.env.local
 *.pem
 *.key
 credentials.json
+firmware/include/secrets.h
+firmware/secrets.h
+
+# Dashboard build
+dashboard/node_modules/
+dashboard/.next/
+dashboard/out/
+
 
 # IDE / OS
 .idea/
