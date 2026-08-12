@@ -1,7 +1,7 @@
 .shell {
   position: relative;
   z-index: 1;
-  max-width: 1220px;
+  max-width: 1440px;
   margin: 0 auto;
   padding: 2rem 1.25rem 4rem;
   animation: riseIn 0.75s var(--ease-spring) both;
@@ -142,13 +142,58 @@
 
 .layout {
   display: grid;
-  grid-template-columns: 1.42fr 1fr;
+  grid-template-columns: 1.15fr 0.85fr;
   gap: 1.1rem;
+  align-items: start;
+}
+
+.stage {
+  grid-column: 1 / -1;
+}
+
+.stageHead {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.85rem;
+}
+
+.stageHead h2 {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 740;
+  letter-spacing: -0.03em;
+}
+
+.liveTag {
+  flex-shrink: 0;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid rgba(47, 158, 99, 0.35);
+  background: rgba(47, 158, 99, 0.1);
+  color: var(--green);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.panelSensors {
+  animation-delay: 0.1s;
+}
+
+.panelControls {
+  animation-delay: 0.14s;
 }
 
 @media (max-width: 980px) {
   .layout {
     grid-template-columns: 1fr;
+  }
+
+  .stage {
+    grid-column: auto;
   }
 
   .heroAside {
@@ -203,19 +248,28 @@
 
 .gaugeRow {
   display: grid;
-  grid-template-columns: 148px 148px 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: 0.9rem;
   align-items: stretch;
   margin-bottom: 1rem;
 }
 
+.sideMeters {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.9rem;
+  border-radius: 22px;
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, #ffffff, #f1f7f1);
+  padding: 1.05rem;
+  box-shadow: var(--shadow-sm);
+  grid-column: 1 / -1;
+}
+
 @media (max-width: 720px) {
   .gaugeRow {
     grid-template-columns: 1fr 1fr;
-  }
-
-  .sideMeters {
-    grid-column: 1 / -1;
   }
 }
 
@@ -303,18 +357,6 @@
   font-weight: 700;
 }
 
-.sideMeters {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 0.9rem;
-  border-radius: 22px;
-  border: 1px solid var(--line);
-  background: linear-gradient(180deg, #ffffff, #f1f7f1);
-  padding: 1.05rem;
-  box-shadow: var(--shadow-sm);
-}
-
 .barMeter {
   display: flex;
   flex-direction: column;
@@ -365,7 +407,7 @@
 
 .chartWrap {
   width: 100%;
-  height: 270px;
+  height: 220px;
   border-radius: 20px;
   border: 1px solid var(--line);
   background:

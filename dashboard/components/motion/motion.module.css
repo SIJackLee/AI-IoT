@@ -13,31 +13,48 @@
 
 .habitat3d {
   position: relative;
-  height: 280px;
+  height: 680px;
   border-radius: 20px;
   border: 1px solid var(--line);
   overflow: hidden;
-  margin-bottom: 1rem;
+  margin-bottom: 0;
   background: #eef4ee;
   box-shadow: var(--shadow-sm);
   animation: sproutIn 0.75s var(--ease-spring) both;
+  overscroll-behavior: contain;
 }
 
 .habitat3d canvas {
   display: block;
   width: 100% !important;
   height: 100% !important;
+  cursor: grab;
+}
+
+.habitat3d canvas:active {
+  cursor: grabbing;
 }
 
 .habitat3dSkeleton {
-  height: 280px;
+  height: 680px;
   border-radius: 20px;
   border: 1px solid var(--line);
-  margin-bottom: 1rem;
+  margin-bottom: 0;
   background:
     linear-gradient(90deg, #eef4ee 25%, #f7faf7 50%, #eef4ee 75%);
   background-size: 200% 100%;
   animation: shimmer 1.4s linear infinite;
+}
+
+.habitat3dFallback {
+  height: 100%;
+  min-height: 680px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 650;
+  background: #eef4ee;
 }
 
 .habitatChips {
@@ -61,6 +78,12 @@
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: -0.01em;
+}
+
+.habitatHint {
+  margin-left: auto;
+  font-weight: 600 !important;
+  opacity: 0.85;
 }
 
 .habitatSvg,

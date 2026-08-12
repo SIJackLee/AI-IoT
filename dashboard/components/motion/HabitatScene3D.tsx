@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useRef } from "react";
+import { Component, useMemo, useRef, type ReactNode } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { ContactShadows, Environment, RoundedBox } from "@react-three/drei";
-import type { Group, Mesh } from "three";
+import { OrbitControls } from "@react-three/drei";
+import { ExtrudeGeometry, Shape, type Group, type Mesh, type MeshBasicMaterial } from "three";
 import type { RgbKind } from "./rgb";
 import styles from "./motion.module.css";
 
@@ -21,86 +21,189 @@ const RGB_COLOR: Record<RgbKind, string> = {
   white: "#dbe4ee",
 };
 
-function Water({ level }: { level: number }) {
-  const mesh = useRef<Mesh>(null);
-  const h = 0.08 + level * 0.72;
-  const y = -0.42 + h / 2;
+class SceneErrorBoundary extends Component<
+  { children: ReactNode; fallback: ReactNode },
+  { err: Error | null }
+> {
+  state = { err: null as Error | null };
+  static getDerivedStateFromError(err: Error) {
+    return { err };
+  }
+  render() {
+    if (this.state.err) return this.props.fallback;
+    return this.props.children;
+  }
+}
 
-  useFrame(({ clock }) => {
-    if (!mesh.current) return;
-    const s = 1 + Math.sin(clock.elapsedTime * 1.6) * 0.012;
-    mesh.current.scale.set(s, 1, s);
-  });
-
+function Box({
+  args,
+  position,
+  rotation,
+  color,
+  opacity = 1,
+  roughness = 0.5,
+  metalness = 0,
+  emissive,
+  emissiveIntensity = 0,
+}: {
+  args: [number, number, number];
+  position?: [number, number, number];
+  rotation?: [number, number, number];
+  color: string;
+  opacity?: number;
+  roughness?: number;
+  metalness?: number;
+  emissive?: string;
+  emissiveIntensity?: number;
+}) {
   return (
-    <mesh ref={mesh} position={[0, y, 0]}>
-      <cylinderGeometry args={[0.72, 0.78, h, 48]} />
-      <meshPhysicalMaterial
-        color="#3b82c4"
-        transparent
-        opacity={0.55}
-        roughness={0.15}
-        metalness={0.05}
-        transmission={0.35}
-        thickness={0.4}
+    <mesh position={position} rotation={rotation}>
+      <boxGeometry args={args} />
+      <meshStandardMaterial
+        color={color}
+        transparent={opacity < 1}
+        opacity={opacity}
+        roughness={roughness}
+        metalness={metalness}
+        emissive={emissive ?? "#000000"}
+        emissiveIntensity={emissiveIntensity}
+        depthWrite={opacity >= 0.95}
       />
     </mesh>
   );
 }
 
-function Plant({ wilt, hot }: { wilt: boolean; hot: boolean }) {
-  const group = useRef<Group>(null);
-  const lean = wilt ? 0.35 : hot ? 0.08 : 0;
-  const leafColor = wilt ? "#c9851a" : "#3cb371";
-
-  useFrame(({ clock }) => {
-    if (!group.current) return;
-    const sway = Math.sin(clock.elapsedTime * (wilt ? 2.2 : 1.1)) * (wilt ? 0.08 : 0.03);
-    group.current.rotation.z = lean + sway;
-  });
-
-  return (
-    <group ref={group} position={[0, -0.05, 0]}>
-      <mesh position={[0, 0.55, 0]}>
-        <cylinderGeometry args={[0.035, 0.05, 1.1, 12]} />
-        <meshStandardMaterial color="#2a5c3b" roughness={0.85} />
-      </mesh>
-      {[
-        { x: -0.28, y: 0.85, z: 0.05, ry: 0.6, rz: 0.55 },
-        { x: 0.3, y: 0.95, z: -0.04, ry: -0.55, rz: -0.5 },
-        { x: -0.08, y: 1.2, z: 0.12, ry: 0.2, rz: 0.15 },
-      ].map((p, i) => (
-        <mesh key={i} position={[p.x, p.y, p.z]} rotation={[0.2, p.ry, p.rz]} scale={[1, 1, 0.45]}>
-          <sphereGeometry args={[0.28, 24, 16]} />
-          <meshStandardMaterial color={leafColor} roughness={0.55} />
-        </mesh>
-      ))}
-    </group>
-  );
-}
-
-function FanBlade({ spinning, hot }: { spinning: boolean; hot: boolean }) {
+function FanRotor11({ spinning, hot }: { spinning: boolean; hot: boolean }) {
   const ref = useRef<Group>(null);
+  const bladeGeo = useMemo(() => {
+    const shape = new Shape();
+    shape.moveTo(0.09, -0.012);
+    shape.quadraticCurveTo(0.18, -0.055, 0.3, -0.048);
+    shape.quadraticCurveTo(0.36, -0.02, 0.37, 0.0);
+    shape.quadraticCurveTo(0.36, 0.028, 0.29, 0.05);
+    shape.quadraticCurveTo(0.17, 0.06, 0.09, 0.018);
+    shape.closePath();
+    const geo = new ExtrudeGeometry(shape, {
+      depth: 0.016,
+      bevelEnabled: true,
+      bevelThickness: 0.003,
+      bevelSize: 0.002,
+      bevelSegments: 2,
+      curveSegments: 14,
+    });
+    geo.translate(0, 0, -0.008);
+    return geo;
+  }, []);
+  const helix = (45 * Math.PI) / 180;
+
   useFrame((_, dt) => {
     if (!ref.current || !spinning) return;
     ref.current.rotation.z += dt * (hot ? 14 : 7);
   });
 
   return (
-    <group position={[1.55, 0.15, 0.9]}>
-      <mesh>
-        <cylinderGeometry args={[0.22, 0.22, 0.06, 24]} />
-        <meshStandardMaterial color="#e8eee8" roughness={0.4} metalness={0.2} />
+    <group position={[0, 1.05, -0.58]}>
+      {/* 외곽 원형 슈라우드 */}
+      <mesh rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[0.355, 0.03, 12, 48]} />
+        <meshStandardMaterial color="#9aab9e" roughness={0.42} metalness={0.06} />
       </mesh>
+      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, -0.01]}>
+        <ringGeometry args={[0.33, 0.39, 48]} />
+        <meshStandardMaterial color="#c5d2c8" roughness={0.5} />
+      </mesh>
+
       <group ref={ref}>
-        {[0, 1, 2, 3].map((i) => (
-          <mesh key={i} rotation={[0, 0, (Math.PI / 2) * i]} position={[0, 0, 0.02]}>
-            <boxGeometry args={[0.08, 0.42, 0.02]} />
-            <meshStandardMaterial
-              color={spinning ? "#1f7a4d" : "#8aa090"}
-              roughness={0.35}
-              metalness={0.15}
-            />
+        {Array.from({ length: 11 }, (_, i) => {
+          const a = (i / 11) * Math.PI * 2;
+          return (
+            <mesh
+              key={i}
+              geometry={bladeGeo}
+              // Z축 원주 배치 + X축 현선각(피치) 45°
+              rotation={[helix, 0, a]}
+            >
+              <meshStandardMaterial
+                color={spinning ? "#8fa89a" : "#b7c8bc"}
+                roughness={0.36}
+                metalness={0.03}
+              />
+            </mesh>
+          );
+        })}
+        <mesh rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.085, 0.095, 0.065, 24]} />
+          <meshStandardMaterial color="#eef3ef" roughness={0.3} />
+        </mesh>
+        <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, 0.03]}>
+          <cylinderGeometry args={[0.028, 0.028, 0.02, 16]} />
+          <meshStandardMaterial color="#64748b" roughness={0.4} metalness={0.25} />
+        </mesh>
+      </group>
+    </group>
+  );
+}
+
+function CrossVents() {
+  const holes: [number, number, number][] = [
+    [0.722, 0.85, 0],
+    [0.722, 1.05, 0],
+    [0.722, 0.65, 0],
+    [0.722, 0.85, 0.2],
+    [0.722, 0.85, -0.2],
+  ];
+  return (
+    <group>
+      {holes.map((p, i) => (
+        <group key={i} position={p} rotation={[0, Math.PI / 2, 0]}>
+          <mesh>
+            <circleGeometry args={[0.075, 28]} />
+            <meshStandardMaterial color="#0b1220" roughness={1} />
+          </mesh>
+          <mesh position={[0, 0, 0.001]}>
+            <ringGeometry args={[0.075, 0.092, 28]} />
+            <meshStandardMaterial color="#a8b5ae" roughness={0.4} />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  );
+}
+
+function PeaPlant({ wilt, soilLevel }: { wilt: boolean; soilLevel: number }) {
+  const group = useRef<Group>(null);
+  const leaf = wilt ? "#c9851a" : "#3cb371";
+  const dirtH = Math.max(0.06, 0.06 + soilLevel * 0.1);
+
+  useFrame(({ clock }) => {
+    if (!group.current) return;
+    const sway = Math.sin(clock.elapsedTime * (wilt ? 2.4 : 1.2)) * (wilt ? 0.07 : 0.025);
+    group.current.rotation.z = (wilt ? 0.28 : 0) + sway;
+  });
+
+  return (
+    <group position={[0, 0.12, 0.05]}>
+      <mesh position={[0, 0.06, 0]}>
+        <cylinderGeometry args={[0.22, 0.26, 0.2, 20]} />
+        <meshStandardMaterial color="#6b7280" roughness={0.7} />
+      </mesh>
+      <mesh position={[0, 0.14, 0]}>
+        <cylinderGeometry args={[0.2, 0.2, dirtH, 20]} />
+        <meshStandardMaterial color="#8b6b4a" roughness={0.95} />
+      </mesh>
+      <group ref={group} position={[0, 0.2, 0]}>
+        <mesh position={[0, 0.28, 0]}>
+          <cylinderGeometry args={[0.015, 0.022, 0.55, 8]} />
+          <meshStandardMaterial color="#2a5c3b" roughness={0.85} />
+        </mesh>
+        {[
+          [-0.12, 0.35, 0.4],
+          [0.13, 0.42, -0.35],
+          [-0.05, 0.55, 0.15],
+        ].map(([x, y, rz], i) => (
+          <mesh key={i} position={[x, y, 0]} rotation={[0.3, 0, rz]} scale={[1, 1, 0.4]}>
+            <sphereGeometry args={[0.11, 12, 10]} />
+            <meshStandardMaterial color={leaf} roughness={0.55} />
           </mesh>
         ))}
       </group>
@@ -108,62 +211,105 @@ function FanBlade({ spinning, hot }: { spinning: boolean; hot: boolean }) {
   );
 }
 
-function HabitatWorld({ t, soil, fan, rgb }: Props) {
-  const level = useMemo(() => {
-    const s = soil === null ? 0.4 : Math.max(0, Math.min(1, soil / 100));
-    return s;
-  }, [soil]);
+function KitTower({ t, soil, fan, rgb }: Props) {
   const wilt = soil !== null && soil < 27;
   const hot = t !== null && t >= 28;
   const rgbOn = rgb !== "off";
   const rgbHex = RGB_COLOR[rgb];
+  const soilLevel = soil === null ? 0.4 : Math.max(0, Math.min(1, soil / 100));
+  const heatRef = useRef<Mesh>(null);
+
+  useFrame(({ clock }) => {
+    const mesh = heatRef.current;
+    if (!mesh) return;
+    if (!hot) {
+      mesh.visible = false;
+      return;
+    }
+    mesh.visible = true;
+    (mesh.material as MeshBasicMaterial).opacity = 0.1 + Math.sin(clock.elapsedTime * 3) * 0.05;
+  });
 
   return (
-    <>
-      <color attach="background" args={["#f3f7f2"]} />
-      <ambientLight intensity={0.55} />
-      <directionalLight position={[3.2, 5, 2]} intensity={1.15} castShadow />
-      <directionalLight position={[-2.5, 2, -1]} intensity={0.25} color="#3b82c4" />
-      {hot ? <pointLight position={[-1.2, 1.6, 1.2]} intensity={1.2} color="#c9851a" distance={5} /> : null}
-      {rgbOn ? (
-        <pointLight position={[1.5, 1.4, 1.1]} intensity={1.6} color={rgbHex} distance={4.5} />
-      ) : null}
+    <group position={[0, -0.15, 0]}>
+      <Box args={[1.55, 0.12, 1.35]} position={[0, -1.42, 0]} color="#111827" roughness={0.85} />
 
-      <group position={[0, -0.15, 0]}>
-        {/* planter */}
-        <RoundedBox args={[2.0, 1.05, 1.55]} radius={0.12} smoothness={4} position={[0, -0.55, 0]} castShadow receiveShadow>
-          <meshStandardMaterial color="#d5e2d6" roughness={0.65} metalness={0.05} />
-        </RoundedBox>
-        {/* inner rim */}
-        <mesh position={[0, -0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[0.82, 0.95, 48]} />
-          <meshStandardMaterial color="#b7c9b8" roughness={0.7} />
-        </mesh>
-        {/* soil bed */}
-        <mesh position={[0, -0.38, 0]} receiveShadow>
-          <cylinderGeometry args={[0.88, 0.9, 0.35, 48]} />
-          <meshStandardMaterial color="#8b6b4a" roughness={0.95} />
-        </mesh>
+      <Box args={[1.45, 2.7, 0.04]} position={[0, 0, 0.62]} color="#dceadf" opacity={0.28} roughness={0.15} />
+      <Box args={[1.45, 2.7, 0.04]} position={[0, 0, -0.62]} color="#dceadf" opacity={0.3} roughness={0.15} />
+      <Box args={[0.04, 2.7, 1.2]} position={[-0.72, 0, 0]} color="#dceadf" opacity={0.3} roughness={0.15} />
+      <Box args={[0.04, 2.7, 1.2]} position={[0.72, 0, 0]} color="#dceadf" opacity={0.3} roughness={0.15} />
+      <Box args={[1.45, 0.04, 1.28]} position={[0, 1.36, 0]} color="#dceadf" opacity={0.35} roughness={0.15} />
 
-        <Water level={level} />
-        <Plant wilt={wilt} hot={hot} />
-        <FanBlade spinning={fan} hot={hot} />
+      <Box
+        args={[0.9, 0.05, 0.12]}
+        position={[0, 1.4, 0.15]}
+        color={rgbHex}
+        emissive={rgbOn ? rgbHex : undefined}
+        emissiveIntensity={rgbOn ? 1.6 : 0}
+      />
+      {rgbOn ? <pointLight position={[0, 1.5, 0.3]} intensity={1.2} color={rgbHex} distance={4} /> : null}
 
-        {/* RGB orb */}
-        <mesh position={[1.55, 1.05, 0.85]}>
-          <sphereGeometry args={[0.14, 24, 24]} />
-          <meshStandardMaterial
-            color={rgbHex}
-            emissive={rgbOn ? rgbHex : "#000000"}
-            emissiveIntensity={rgbOn ? 1.4 : 0}
-            roughness={0.25}
-            metalness={0.2}
-          />
+      <Box args={[1.28, 0.05, 1.05]} position={[0, 0.05, 0]} color="#0f172a" roughness={0.9} />
+
+      <PeaPlant wilt={wilt} soilLevel={soilLevel} />
+
+      {/* LCD 중하단 */}
+      <group position={[0, -0.55, 0.62]}>
+        <Box args={[0.85, 0.42, 0.06]} color="#1e293b" />
+        <mesh position={[0, 0.02, 0.035]}>
+          <planeGeometry args={[0.72, 0.28]} />
+          <meshStandardMaterial color="#86efac" emissive="#22c55e" emissiveIntensity={0.5} />
         </mesh>
       </group>
 
-      <ContactShadows position={[0, -1.15, 0]} opacity={0.35} scale={8} blur={2.4} far={3} />
-      <Environment preset="park" environmentIntensity={0.45} />
+      {/* 좌측 센서 가로 */}
+      <group position={[-0.72, 0.9, 0.15]}>
+        <Box args={[0.08, 0.16, 0.14]} position={[0, 0, 0.22]} color="#3b82c4" />
+        <Box args={[0.08, 0.2, 0.12]} color="#8b6b4a" />
+        <mesh position={[0, 0, -0.22]}>
+          <sphereGeometry args={[0.06, 12, 12]} />
+          <meshStandardMaterial color="#e0a100" emissive="#e0a100" emissiveIntensity={0.15} />
+        </mesh>
+      </group>
+
+      <CrossVents />
+      <FanRotor11 spinning={fan} hot={hot} />
+
+      {/* MCU */}
+      <group position={[0, -0.95, -0.55]}>
+        <Box args={[0.7, 0.45, 0.08]} color="#166534" />
+        <Box args={[0.35, 0.12, 0.05]} position={[0, 0.05, 0.05]} color="#94a3b8" />
+      </group>
+
+      <mesh ref={heatRef} position={[0, 0.7, 0]} visible={false}>
+        <boxGeometry args={[1.2, 1.6, 1.0]} />
+        <meshBasicMaterial color="#c9851a" transparent opacity={0.1} depthWrite={false} />
+      </mesh>
+    </group>
+  );
+}
+
+function HabitatWorld(props: Props) {
+  return (
+    <>
+      <color attach="background" args={["#eef4ee"]} />
+      <ambientLight intensity={0.8} />
+      <directionalLight position={[3.2, 5, 2.5]} intensity={1.05} />
+      <directionalLight position={[-2.5, 2, -1.2]} intensity={0.35} color="#93c5c9" />
+      <KitTower {...props} />
+      <OrbitControls
+        enablePan
+        enableZoom
+        enableRotate
+        zoomSpeed={0.85}
+        rotateSpeed={0.7}
+        panSpeed={0.55}
+        minDistance={1.6}
+        maxDistance={9}
+        minPolarAngle={0.25}
+        maxPolarAngle={Math.PI / 2.05}
+        target={[0, 0.05, 0]}
+      />
     </>
   );
 }
@@ -174,19 +320,29 @@ export function HabitatScene3D(props: Props) {
 
   return (
     <div className={styles.habitat3d}>
-      <Canvas
-        shadows
-        dpr={[1, 1.75]}
-        camera={{ position: [2.6, 1.9, 3.4], fov: 38, near: 0.1, far: 40 }}
-        gl={{ antialias: true, alpha: false }}
+      <SceneErrorBoundary
+        fallback={
+          <div className={styles.habitat3dFallback}>
+            3D 로드 실패 · 센서 데이터는 옆 카드에서 확인
+          </div>
+        }
       >
-        <HabitatWorld {...props} />
-      </Canvas>
+        <Canvas
+          dpr={[1, 1.5]}
+          camera={{ position: [3.1, 1.55, 3.8], fov: 38, near: 0.1, far: 50 }}
+          gl={{ antialias: true, alpha: false }}
+          onCreated={({ gl }) => gl.setClearColor("#eef4ee")}
+          style={{ touchAction: "none" }}
+        >
+          <HabitatWorld {...props} />
+        </Canvas>
+      </SceneErrorBoundary>
       <div className={styles.habitatChips} aria-hidden>
         <span>토양 {soilLabel}</span>
         <span>온도 {tLabel}</span>
         <span>팬 {props.fan ? "ON" : "off"}</span>
         <span>RGB {props.rgb.toUpperCase()}</span>
+        <span className={styles.habitatHint}>스크롤 줌 · 드래그 회전</span>
       </div>
     </div>
   );

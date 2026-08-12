@@ -276,20 +276,29 @@ export default function HomePage() {
       </header>
 
       <div className={styles.layout}>
-        <section className={`${styles.panel} ${styles.panelMain}`}>
-          <div className={styles.panelHead}>
+        <section className={`${styles.panel} ${styles.stage} ${styles.panelMain}`}>
+          <div className={styles.stageHead}>
             <div>
-              <h2>생육 모니터링</h2>
-              <p className={styles.panelHint}>모션 서식지 · 온·습도 추이 · 토양·조도</p>
+              <h2>키트 타워 · 3D</h2>
+              <p className={styles.panelHint}>드래그 회전 · 스크롤 줌 · 우클릭 팬</p>
             </div>
+            <span className={styles.liveTag}>Live</span>
           </div>
-
           <HabitatScene
             t={temp}
             soil={data?.soil ?? null}
             fan={fanOn}
             rgb={rgbKind}
           />
+        </section>
+
+        <section className={`${styles.panel} ${styles.panelSensors}`}>
+          <div className={styles.panelHead}>
+            <div>
+              <h2>센서 · 트렌드</h2>
+              <p className={styles.panelHint}>온·습도 게이지 · 토양·조도 · 최근 이력</p>
+            </div>
+          </div>
 
           <div className={styles.gaugeRow}>
             <RingGauge
@@ -370,7 +379,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className={styles.panel}>
+        <section className={`${styles.panel} ${styles.panelControls}`}>
           <div className={styles.panelHead}>
             <div>
               <h2>장치 제어</h2>
