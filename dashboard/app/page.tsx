@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Area,
   AreaChart,
@@ -10,14 +10,14 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { Droplets, Power, Thermometer } from "lucide-react";
+import { ChevronLeft, ChevronRight, Bot, Power, SlidersHorizontal } from "lucide-react";
 import { fetchTelemetry, putCommand, type Command, type Telemetry } from "@/lib/firebase";
 import { FanControl } from "@/components/FanControl";
 import { RgbPad } from "@/components/RgbPad";
 import { BuzzerPad } from "@/components/BuzzerPad";
 import { LcdPanel } from "@/components/LcdPanel";
 import { DemoPad, type DemoMode } from "@/components/DemoPad";
-import { AutoPad, evalAutoRules, type ControlMode } from "@/components/AutoPad";
+import { AUTO_RULES, AutoPad, evalAutoRules, type ControlMode } from "@/components/AutoPad";
 import { HabitatScene, classifyRgb } from "@/components/motion/HabitatScene";
 import { ActuatorPhysics } from "@/components/motion/ActuatorPhysics";
 import styles from "./page.module.css";
@@ -37,86 +37,6 @@ function fmt(n: number | undefined, digits = 0) {
 
 function valid(n: number | undefined) {
   return n !== undefined && !Number.isNaN(n) && n > -900 ? n : null;
-}
-
-function clampPct(n: number, min: number, max: number) {
-  if (max <= min) return 0;
-  return Math.max(0, Math.min(100, ((n - min) / (max - min)) * 100));
-}
-
-function RingGauge({
-  value,
-  unit,
-  label,
-  color,
-  max = 100,
-  icon,
-}: {
-  value: number | null;
-  unit: string;
-  label: string;
-  color: string;
-  max?: number;
-  icon: ReactNode;
-}) {
-  const pct = value === null ? 0 : clampPct(value, 0, max);
-  const r = 46;
-  const c = 2 * Math.PI * r;
-  const dash = (pct / 100) * c;
-
-  return (
-    <div className={styles.ringCard}>
-      <svg className={styles.ringSvg} viewBox="0 0 120 120" aria-hidden>
-        <circle cx="60" cy="60" r={r} className={styles.ringTrack} />
-        <circle
-          cx="60"
-          cy="60"
-          r={r}
-          className={styles.ringValue}
-          style={{
-            stroke: color,
-            color,
-            strokeDasharray: `${dash} ${c}`,
-          }}
-        />
-      </svg>
-      <div className={styles.ringCenter}>
-        <span className={styles.ringIcon} style={{ color }}>
-          {icon}
-        </span>
-        <strong>
-          {value === null ? "—" : value.toFixed(value < 40 ? 1 : 0)}
-          <span>{unit}</span>
-        </strong>
-        <em>{label}</em>
-      </div>
-    </div>
-  );
-}
-
-function BarMeter({
-  label,
-  value,
-  max = 4095,
-  color,
-}: {
-  label: string;
-  value: number | null;
-  max?: number;
-  color: string;
-}) {
-  const pct = value === null ? 0 : clampPct(value, 0, max);
-  return (
-    <div className={styles.barMeter}>
-      <div className={styles.barHead}>
-        <span>{label}</span>
-        <b>{value === null ? "—" : Math.round(value)}</b>
-      </div>
-      <div className={styles.barTrack}>
-        <i style={{ width: `${pct}%`, background: color }} />
-      </div>
-    </div>
-  );
 }
 
 function normalizeDemo(v: string | undefined): DemoMode {
@@ -142,6 +62,7 @@ export default function HomePage() {
   const [online, setOnline] = useState(false);
   const [lcd, setLcd] = useState("캠틱 AI-IoT");
   const [lcdPreview, setLcdPreview] = useState("대기 중...");
+  const [controlsOpen, setControlsOpen] = useState(true);
 
   const refresh = useCallback(async () => {
     try {
@@ -256,70 +177,234 @@ export default function HomePage() {
           <h1 className={styles.brand}>AI-IoT 스마트팜</h1>
           <p className={styles.tagline}>생육 환경 모니터링 · 자동·원격 제어</p>
         </div>
+
         <div className={styles.heroAside}>
-          <span
-            className={`${styles.livePill} ${
-              controlMode === "ALERT" ? styles.modeAlert : controlMode === "AUTO" ? styles.modeAuto : ""
-            }`}
-          >
-            <i className={`${styles.liveDot} ${online ? "" : styles.bad}`} />
-            {online ? controlMode : "오프라인"}
-          </span>
+          <div className={styles.heroAutoRow}>
+            <button
+              type="button"
+              className={`${styles.heroAutoToggle} ${autoOn ? styles.heroAutoToggleOn : ""} ${
+                autoOn && (controlMode === "ALERT" || autoEval.alert) ? styles.heroAutoToggleAlert : ""
+              }`}
+              disabled={busy}
+              aria-pressed={autoOn}
+              onClick={() =>
+                send(
+                  autoOn
+                    ? { auto: 0 }
+                    : { auto: 1, demo: "off" },
+                )
+              }
+            >
+              <span className={styles.heroAutoOrb} aria-hidden>
+                <Bot size={20} strokeWidth={1.8} />
+              </span>
+              <span className={styles.heroAutoCopy}>
+                <strong>{autoOn ? "AUTO ON" : "AUTO OFF"}</strong>
+                <em>
+                  {autoOn
+                    ? controlMode === "ALERT" || autoEval.alert
+                      ? "경보 규칙 활성"
+                      : "규칙 제어 중"
+                    : "탭하여 자동모드"}
+                </em>
+              </span>
+              <span className={`${styles.heroAutoSwitch} ${autoOn ? styles.heroAutoSwitchOn : ""}`} aria-hidden>
+                <i />
+              </span>
+            </button>
+
+            <span
+              className={`${styles.livePill} ${
+                controlMode === "ALERT" ? styles.modeAlert : controlMode === "AUTO" ? styles.modeAuto : ""
+              }`}
+            >
+              <i className={`${styles.liveDot} ${online ? "" : styles.bad}`} />
+              {online ? controlMode : "오프라인"}
+            </span>
+          </div>
+
           <p className={styles.meta}>
             {data?.ip ? `ESP ${data.ip}` : "ESP —"} · RSSI {fmt(data?.rssi)} dBm · 키{" "}
             {keyPressed ? "눌림" : "대기"}
             {demoLock ? ` · DEMO ${demoMode.toUpperCase()}` : ""}
-            {autoLock && !demoLock ? " · AUTO" : ""}
           </p>
+
+          {autoOn ? (
+            <div className={styles.heroRuleBadges} aria-label="활성 자동 규칙">
+              {AUTO_RULES.filter((r) => autoEval[r.id]).map((r) => {
+                const Icon = r.Icon;
+                const danger = r.id === "r5";
+                return (
+                  <div
+                    key={r.id}
+                    className={`${styles.ruleBadge} ${danger ? styles.ruleBadgeDanger : ""}`}
+                    title={`${r.title} · ${r.hint}`}
+                  >
+                    <Icon size={16} strokeWidth={2.2} />
+                    <strong>{r.id.toUpperCase()}</strong>
+                    <span>{r.short}</span>
+                  </div>
+                );
+              })}
+              {AUTO_RULES.every((r) => !autoEval[r.id]) ? (
+                <span className={styles.ruleBadgeEmpty}>활성 규칙 없음</span>
+              ) : null}
+            </div>
+          ) : null}
         </div>
         {error ? <p className={styles.error}>{error}</p> : null}
       </header>
 
       <div className={styles.layout}>
-        <section className={`${styles.panel} ${styles.stage} ${styles.panelMain}`}>
-          <div className={styles.stageHead}>
-            <div>
-              <h2>키트 타워 · 3D</h2>
-              <p className={styles.panelHint}>드래그 회전 · 스크롤 줌 · 우클릭 팬</p>
+        <div className={styles.stageRow}>
+          <section className={`${styles.panel} ${styles.stage} ${styles.panelMain}`}>
+            <div className={styles.stageHead}>
+              <div>
+                <h2>키트 타워 · 3D</h2>
+                <p className={styles.panelHint}>드래그 회전 · 스크롤 줌 · 우클릭 팬</p>
+              </div>
+              <span className={styles.liveTag}>Live</span>
             </div>
-            <span className={styles.liveTag}>Live</span>
-          </div>
-          <HabitatScene
-            t={temp}
-            soil={data?.soil ?? null}
-            fan={fanOn}
-            rgb={rgbKind}
-          />
-        </section>
+            <HabitatScene
+              t={temp}
+              soil={data?.soil ?? null}
+              fan={fanOn}
+              rgb={rgbKind}
+            />
+          </section>
+
+          <aside
+            className={`${styles.sideDock} ${controlsOpen ? styles.sideDockOpen : styles.sideDockClosed}`}
+            aria-label="장치 제어 사이드 패널"
+          >
+            <button
+              type="button"
+              className={styles.sideHandle}
+              aria-expanded={controlsOpen}
+              aria-controls="device-controls-panel"
+              onClick={() => setControlsOpen((v) => !v)}
+            >
+              <span className={styles.sideHandleIcon} aria-hidden>
+                <SlidersHorizontal size={16} strokeWidth={2.2} />
+              </span>
+              <span className={styles.sideHandleLabel}>장치 제어</span>
+              <span className={styles.sideHandleChevron} aria-hidden>
+                {controlsOpen ? (
+                  <ChevronRight size={18} strokeWidth={2.4} />
+                ) : (
+                  <ChevronLeft size={18} strokeWidth={2.4} />
+                )}
+              </span>
+            </button>
+
+            <section id="device-controls-panel" className={styles.sidePanel}>
+              <div className={styles.sidePanelHead}>
+                <div>
+                  <h2>장치 제어</h2>
+                  <p className={styles.panelHint}>자동규칙 · DEMO · 수동 액추에이터</p>
+                </div>
+              </div>
+
+              <div className={styles.controlStack}>
+                <div className={styles.deviceCard}>
+                  <ActuatorPhysics
+                    mode={controlMode}
+                    fan={fanOn}
+                    rgb={rgbKind}
+                    t={temp}
+                  />
+                </div>
+                <div className={styles.deviceCard}>
+                  <AutoPad
+                    on={autoOn}
+                    mode={controlMode}
+                    eval={autoEval}
+                    sensors={sensors}
+                    disabled={busy}
+                    showToggle={false}
+                    showRules={false}
+                    onToggle={(next) =>
+                      send(
+                        next
+                          ? { auto: 1, demo: "off" }
+                          : { auto: 0 },
+                      )
+                    }
+                  />
+                </div>
+                <div className={styles.deviceCard}>
+                  <DemoPad
+                    mode={demoMode}
+                    disabled={busy}
+                    onChange={(next) =>
+                      send(
+                        next === "off"
+                          ? { demo: "off" }
+                          : { demo: next, auto: 0 },
+                      )
+                    }
+                  />
+                </div>
+                <div className={styles.deviceCard}>
+                  <FanControl
+                    on={fanOn}
+                    disabled={busy || manualLock}
+                    onToggle={(next) => send({ fan: next ? 1 : 0 })}
+                  />
+                </div>
+                <div className={styles.deviceCard}>
+                  <RgbPad
+                    value={rgb}
+                    disabled={busy || manualLock}
+                    onChange={(next) => send({ rgb: next })}
+                  />
+                </div>
+                <div className={styles.deviceCard}>
+                  <BuzzerPad disabled={busy} onBeep={beepOnce} />
+                </div>
+                <div className={styles.deviceCard}>
+                  <LcdPanel
+                    value={lcd}
+                    preview={lcdPreview}
+                    disabled={busy || manualLock}
+                    onChange={setLcd}
+                    onSend={() => send({ lcd: lcd.trim() })}
+                    onClear={() => {
+                      setLcd("");
+                      send({ lcd: "" });
+                    }}
+                  />
+                </div>
+                <div className={styles.deviceCard}>
+                  <button
+                    type="button"
+                    className={styles.safetyBtn}
+                    disabled={busy}
+                    onClick={() =>
+                      send({
+                        auto: 0,
+                        demo: "off",
+                        fan: 0,
+                        buzzer: 0,
+                        rgb: { r: 0, g: 0, b: 0 },
+                        lcd: "",
+                      })
+                    }
+                  >
+                    <Power size={18} strokeWidth={2} />
+                    전체 끄기
+                  </button>
+                </div>
+              </div>
+            </section>
+          </aside>
+        </div>
 
         <section className={`${styles.panel} ${styles.panelSensors}`}>
           <div className={styles.panelHead}>
             <div>
               <h2>센서 · 트렌드</h2>
-              <p className={styles.panelHint}>온·습도 게이지 · 토양·조도 · 최근 이력</p>
-            </div>
-          </div>
-
-          <div className={styles.gaugeRow}>
-            <RingGauge
-              value={temp}
-              unit="°C"
-              label="온도"
-              color="#1f7a4d"
-              max={50}
-              icon={<Thermometer size={16} strokeWidth={2.2} />}
-            />
-            <RingGauge
-              value={hum}
-              unit="%"
-              label="습도"
-              color="#3b82c4"
-              max={100}
-              icon={<Droplets size={16} strokeWidth={2.2} />}
-            />
-            <div className={styles.sideMeters}>
-              <BarMeter label="토양 수분 %" value={data?.soil ?? null} max={100} color="#8b6b4a" />
-              <BarMeter label="조도 CDS (raw)" value={data?.cds ?? null} color="#e0a100" />
+              <p className={styles.panelHint}>온·습도 최근 이력</p>
             </div>
           </div>
 
@@ -376,105 +461,6 @@ export default function HomePage() {
                 />
               </AreaChart>
             </ResponsiveContainer>
-          </div>
-        </section>
-
-        <section className={`${styles.panel} ${styles.panelControls}`}>
-          <div className={styles.panelHead}>
-            <div>
-              <h2>장치 제어</h2>
-              <p className={styles.panelHint}>자동규칙 · DEMO · 수동 액추에이터</p>
-            </div>
-          </div>
-
-          <div className={styles.controlStack}>
-            <div className={styles.deviceCard}>
-              <ActuatorPhysics
-                mode={controlMode}
-                fan={fanOn}
-                rgb={rgbKind}
-                t={temp}
-              />
-            </div>
-            <div className={styles.deviceCard}>
-              <AutoPad
-                on={autoOn}
-                mode={controlMode}
-                eval={autoEval}
-                sensors={sensors}
-                disabled={busy}
-                onToggle={(next) =>
-                  send(
-                    next
-                      ? { auto: 1, demo: "off" }
-                      : { auto: 0 },
-                  )
-                }
-              />
-            </div>
-            <div className={styles.deviceCard}>
-              <DemoPad
-                mode={demoMode}
-                disabled={busy}
-                onChange={(next) =>
-                  send(
-                    next === "off"
-                      ? { demo: "off" }
-                      : { demo: next, auto: 0 },
-                  )
-                }
-              />
-            </div>
-            <div className={styles.deviceCard}>
-              <FanControl
-                on={fanOn}
-                disabled={busy || manualLock}
-                onToggle={(next) => send({ fan: next ? 1 : 0 })}
-              />
-            </div>
-            <div className={styles.deviceCard}>
-              <RgbPad
-                value={rgb}
-                disabled={busy || manualLock}
-                onChange={(next) => send({ rgb: next })}
-              />
-            </div>
-            <div className={styles.deviceCard}>
-              <BuzzerPad disabled={busy} onBeep={beepOnce} />
-            </div>
-            <div className={styles.deviceCard}>
-              <LcdPanel
-                value={lcd}
-                preview={lcdPreview}
-                disabled={busy || manualLock}
-                onChange={setLcd}
-                onSend={() => send({ lcd: lcd.trim() })}
-                onClear={() => {
-                  setLcd("");
-                  send({ lcd: "" });
-                }}
-              />
-            </div>
-            <div className={styles.deviceCard}>
-              <button
-                type="button"
-                className={styles.safetyBtn}
-                disabled={busy}
-                onClick={() =>
-                  send({
-                    auto: 0,
-                    demo: "off",
-                    fan: 0,
-                    buzzer: 0,
-                    rgb: { r: 0, g: 0, b: 0 },
-                    lcd: "",
-                  })
-                }
-              >
-                <Power size={18} strokeWidth={2} />
-                전체 끄기
-              </button>
-            </div>
           </div>
         </section>
       </div>

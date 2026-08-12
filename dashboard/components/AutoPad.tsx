@@ -76,6 +76,10 @@ type Props = {
   };
   disabled?: boolean;
   onToggle: (next: boolean) => void;
+  /** false면 토글 버튼 숨김(헤더 배치용) */
+  showToggle?: boolean;
+  /** false면 R1–R5 목록 숨김(헤더 뱃지용) */
+  showRules?: boolean;
 };
 
 function JourneyMeter({
@@ -142,17 +146,29 @@ function JourneyMeter({
 const RULES: {
   id: keyof Pick<AutoEval, "r1" | "r2" | "r3" | "r4" | "r5">;
   title: string;
+  short: string;
   hint: string;
   Icon: typeof Fan;
 }[] = [
-  { id: "r1", title: "R1 고온", hint: `T≥${AUTO_THRESH.tOn}°C → FAN`, Icon: Flame },
-  { id: "r2", title: "R2 고습", hint: `H≥${AUTO_THRESH.hOn}% → FAN`, Icon: Fan },
-  { id: "r3", title: "R3 건조", hint: `soil≤${AUTO_THRESH.soilDry} → 주황`, Icon: Sprout },
-  { id: "r4", title: "R4 저조도", hint: `cds≤${AUTO_THRESH.cdsDark} → 보조광`, Icon: Lightbulb },
-  { id: "r5", title: "R5 위험", hint: `T≥${AUTO_THRESH.tHot} + soil≤${AUTO_THRESH.soilCrit}`, Icon: ShieldAlert },
+  { id: "r1", title: "R1 고온", short: "고온", hint: `T≥${AUTO_THRESH.tOn}°C → FAN`, Icon: Flame },
+  { id: "r2", title: "R2 고습", short: "고습", hint: `H≥${AUTO_THRESH.hOn}% → FAN`, Icon: Fan },
+  { id: "r3", title: "R3 건조", short: "건조", hint: `soil≤${AUTO_THRESH.soilDry} → 주황`, Icon: Sprout },
+  { id: "r4", title: "R4 저조도", short: "저조도", hint: `cds≤${AUTO_THRESH.cdsDark} → 보조광`, Icon: Lightbulb },
+  { id: "r5", title: "R5 위험", short: "위험", hint: `T≥${AUTO_THRESH.tHot} + soil≤${AUTO_THRESH.soilCrit}`, Icon: ShieldAlert },
 ];
 
-export function AutoPad({ on, mode, eval: ev, sensors, disabled, onToggle }: Props) {
+export { RULES as AUTO_RULES };
+
+export function AutoPad({
+  on,
+  mode,
+  eval: ev,
+  sensors,
+  disabled,
+  onToggle,
+  showToggle = true,
+  showRules = true,
+}: Props) {
   const alert = on && (mode === "ALERT" || ev.alert);
 
   return (
@@ -162,31 +178,33 @@ export function AutoPad({ on, mode, eval: ev, sensors, disabled, onToggle }: Pro
         <em className={on ? styles.stateOn : styles.stateOff}>{mode}</em>
       </div>
 
-      <button
-        type="button"
-        className={`${styles.autoToggle} ${on ? styles.autoToggleOn : ""}`}
-        disabled={disabled}
-        aria-pressed={on}
-        onClick={() => onToggle(!on)}
-      >
-        <span className={styles.autoOrb} aria-hidden>
-          <Bot size={28} strokeWidth={1.7} />
-        </span>
-        <div className={styles.autoCopy}>
-          <strong>{on ? "AUTO ON" : "AUTO OFF"}</strong>
-          <span>
-            {on
-              ? alert
-                ? "경보 규칙 활성 · RGB 표시"
-                : "센서 규칙으로 FAN·RGB 제어"
-              : "탭하여 자동모드 시작"}
+      {showToggle ? (
+        <button
+          type="button"
+          className={`${styles.autoToggle} ${on ? styles.autoToggleOn : ""}`}
+          disabled={disabled}
+          aria-pressed={on}
+          onClick={() => onToggle(!on)}
+        >
+          <span className={styles.autoOrb} aria-hidden>
+            <Bot size={28} strokeWidth={1.7} />
           </span>
-          <small>부저 제외 · DEMO와 상호 배타</small>
-        </div>
-        <span className={`${styles.autoSwitch} ${on ? styles.autoSwitchOn : ""}`} aria-hidden>
-          <i />
-        </span>
-      </button>
+          <div className={styles.autoCopy}>
+            <strong>{on ? "AUTO ON" : "AUTO OFF"}</strong>
+            <span>
+              {on
+                ? alert
+                  ? "경보 규칙 활성 · RGB 표시"
+                  : "센서 규칙으로 FAN·RGB 제어"
+                : "탭하여 자동모드 시작"}
+            </span>
+            <small>부저 제외 · DEMO와 상호 배타</small>
+          </div>
+          <span className={`${styles.autoSwitch} ${on ? styles.autoSwitchOn : ""}`} aria-hidden>
+            <i />
+          </span>
+        </button>
+      ) : null}
 
       <div className={styles.autoViz}>
         <div className={styles.autoOutcome}>
@@ -251,28 +269,30 @@ export function AutoPad({ on, mode, eval: ev, sensors, disabled, onToggle }: Pro
           />
         </div>
 
-        <div className={styles.autoRules} role="list">
-          {RULES.map((r) => {
-            const active = on && ev[r.id];
-            const Icon = r.Icon;
-            return (
-              <div
-                key={r.id}
-                role="listitem"
-                className={`${styles.autoRule} ${active ? styles.autoRuleOn : ""} ${
-                  r.id === "r5" && active ? styles.autoRuleDanger : ""
-                }`}
-              >
-                <Icon size={15} strokeWidth={2} />
-                <div>
-                  <strong>{r.title}</strong>
-                  <span>{r.hint}</span>
+        {showRules ? (
+          <div className={styles.autoRules} role="list">
+            {RULES.map((r) => {
+              const active = on && ev[r.id];
+              const Icon = r.Icon;
+              return (
+                <div
+                  key={r.id}
+                  role="listitem"
+                  className={`${styles.autoRule} ${active ? styles.autoRuleOn : ""} ${
+                    r.id === "r5" && active ? styles.autoRuleDanger : ""
+                  }`}
+                >
+                  <Icon size={15} strokeWidth={2} />
+                  <div>
+                    <strong>{r.title}</strong>
+                    <span>{r.hint}</span>
+                  </div>
+                  <em>{active ? "ON" : "off"}</em>
                 </div>
-                <em>{active ? "ON" : "off"}</em>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        ) : null}
       </div>
     </div>
   );

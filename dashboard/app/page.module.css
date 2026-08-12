@@ -66,7 +66,187 @@
   display: flex;
   flex-direction: column;
   align-items: flex-end;
+  gap: 0.55rem;
+  max-width: min(100%, 520px);
+}
+
+.heroAutoRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.55rem;
+}
+
+.heroAutoToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-height: 52px;
+  padding: 0.45rem 0.7rem 0.45rem 0.5rem;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, #ffffff, #f3f8f3);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  color: var(--text);
+  transition:
+    border-color 0.25s ease,
+    background 0.25s ease,
+    box-shadow 0.25s ease,
+    transform 0.18s var(--ease-spring);
+}
+
+.heroAutoToggle:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(47, 158, 99, 0.35);
+}
+
+.heroAutoToggle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.heroAutoToggleOn {
+  border-color: rgba(47, 158, 99, 0.4);
+  background: linear-gradient(180deg, #f3fbf5, #e5f4ea);
+  box-shadow: 0 10px 24px rgba(47, 158, 99, 0.12);
+}
+
+.heroAutoToggleAlert {
+  border-color: rgba(239, 68, 68, 0.4);
+  background: linear-gradient(180deg, #fff7f7, #ffeaea);
+  animation: modeAlertGlow 1.6s ease-in-out infinite;
+}
+
+.heroAutoOrb {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  color: var(--muted);
+  background: rgba(28, 56, 36, 0.06);
+}
+
+.heroAutoToggleOn .heroAutoOrb {
+  color: var(--green);
+  background: rgba(47, 158, 99, 0.14);
+}
+
+.heroAutoToggleAlert .heroAutoOrb {
+  color: var(--rose);
+  background: rgba(239, 68, 68, 0.12);
+}
+
+.heroAutoCopy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  text-align: left;
+}
+
+.heroAutoCopy strong {
+  font-size: 0.88rem;
+  font-weight: 780;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.heroAutoCopy em {
+  font-style: normal;
+  font-size: 0.7rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.heroAutoSwitch {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  border-radius: 999px;
+  background: rgba(28, 56, 36, 0.12);
+  margin-left: 0.15rem;
+  transition: background 0.25s ease;
+}
+
+.heroAutoSwitch i {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.18);
+  transition: transform 0.28s var(--ease-spring);
+}
+
+.heroAutoSwitchOn {
+  background: rgba(47, 158, 99, 0.55);
+}
+
+.heroAutoSwitchOn i {
+  transform: translateX(16px);
+}
+
+.heroAutoToggleAlert .heroAutoSwitchOn {
+  background: rgba(239, 68, 68, 0.55);
+}
+
+.heroRuleBadges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 0.45rem;
+}
+
+.ruleBadge {
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
+  border: 1px solid rgba(47, 158, 99, 0.28);
+  background: linear-gradient(160deg, #ffffff, #eaf6ee);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.12rem;
+  color: var(--green);
+  animation: sproutIn 0.45s var(--ease-spring) both;
+}
+
+.ruleBadge strong {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+
+.ruleBadge span {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--muted);
+  line-height: 1;
+}
+
+.ruleBadgeDanger {
+  border-color: rgba(239, 68, 68, 0.35);
+  background: linear-gradient(160deg, #fff, #ffe8e8);
+  color: var(--rose);
+  animation: modeAlertGlow 1.6s ease-in-out infinite;
+}
+
+.ruleBadgeEmpty {
+  font-size: 0.72rem;
+  font-weight: 650;
+  color: var(--muted);
+  padding: 0.35rem 0.55rem;
+  border-radius: 10px;
+  border: 1px dashed var(--line);
+  background: rgba(255, 255, 255, 0.7);
 }
 
 .livePill {
@@ -142,13 +322,13 @@
 
 .layout {
   display: grid;
-  grid-template-columns: 1.15fr 0.85fr;
+  grid-template-columns: 1fr;
   gap: 1.1rem;
   align-items: start;
 }
 
 .stage {
-  grid-column: 1 / -1;
+  grid-column: auto;
 }
 
 .stageHead {
@@ -183,19 +363,7 @@
   animation-delay: 0.1s;
 }
 
-.panelControls {
-  animation-delay: 0.14s;
-}
-
 @media (max-width: 980px) {
-  .layout {
-    grid-template-columns: 1fr;
-  }
-
-  .stage {
-    grid-column: auto;
-  }
-
   .heroAside {
     align-items: flex-start;
   }
@@ -246,168 +414,9 @@
   font-size: 0.84rem;
 }
 
-.gaugeRow {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.9rem;
-  align-items: stretch;
-  margin-bottom: 1rem;
-}
-
-.sideMeters {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 0.9rem;
-  border-radius: 22px;
-  border: 1px solid var(--line);
-  background: linear-gradient(180deg, #ffffff, #f1f7f1);
-  padding: 1.05rem;
-  box-shadow: var(--shadow-sm);
-  grid-column: 1 / -1;
-}
-
-@media (max-width: 720px) {
-  .gaugeRow {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-
-.ringCard {
-  position: relative;
-  border-radius: 22px;
-  border: 1px solid var(--line);
-  background:
-    radial-gradient(120px 80px at 50% 18%, rgba(255, 255, 255, 0.95), transparent 60%),
-    linear-gradient(180deg, #ffffff, #eef6ef);
-  min-height: 158px;
-  display: grid;
-  place-items: center;
-  box-shadow: var(--shadow-sm);
-  transition: transform 0.25s var(--ease-soft), box-shadow 0.25s ease;
-  animation: softFloat 5.8s ease-in-out infinite;
-}
-
-.ringCard:nth-child(2) {
-  animation-delay: 0.45s;
-}
-
-.ringCard:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 16px 34px rgba(28, 56, 36, 0.1);
-}
-
-.ringSvg {
-  width: 124px;
-  height: 124px;
-  transform: rotate(-90deg);
-}
-
-.ringTrack {
-  fill: none;
-  stroke: rgba(28, 56, 36, 0.08);
-  stroke-width: 11;
-}
-
-.ringValue {
-  fill: none;
-  stroke-width: 11;
-  stroke-linecap: round;
-  transition: stroke-dasharray 0.85s var(--ease-spring);
-  filter: drop-shadow(0 0 7px color-mix(in srgb, currentColor 40%, transparent));
-}
-
-.ringCenter {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-}
-
-.ringIcon {
-  display: grid;
-  place-items: center;
-  margin-bottom: 0.22rem;
-  animation: leafSway 4s ease-in-out infinite;
-}
-
-.ringCenter strong {
-  font-family: var(--font-mono);
-  font-size: 1.32rem;
-  font-weight: 650;
-  letter-spacing: -0.03em;
-  line-height: 1;
-}
-
-.ringCenter strong span {
-  margin-left: 0.1rem;
-  font-size: 0.72rem;
-  color: var(--muted);
-  font-weight: 500;
-}
-
-.ringCenter em {
-  margin-top: 0.3rem;
-  font-style: normal;
-  font-size: 0.78rem;
-  color: var(--muted);
-  font-weight: 700;
-}
-
-.barMeter {
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-}
-
-.barHead {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 0.5rem;
-  font-size: 0.8rem;
-  color: var(--muted);
-}
-
-.barHead b {
-  font-family: var(--font-mono);
-  color: var(--text);
-  font-size: 0.95rem;
-}
-
-.barTrack {
-  height: 12px;
-  border-radius: 999px;
-  background: rgba(28, 56, 36, 0.08);
-  overflow: hidden;
-}
-
-.barTrack i {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  transform-origin: left center;
-  transition: width 0.75s var(--ease-spring);
-  position: relative;
-  overflow: hidden;
-  animation: growUp 0.7s var(--ease-spring) both;
-}
-
-.barTrack i::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
-  background-size: 200% 100%;
-  animation: shimmer 2.6s linear infinite;
-}
-
 .chartWrap {
   width: 100%;
-  height: 220px;
+  height: 280px;
   border-radius: 20px;
   border: 1px solid var(--line);
   background:
@@ -415,6 +424,227 @@
     radial-gradient(420px 180px at 82% 0%, rgba(59, 130, 196, 0.08), transparent 60%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.96), #eef5ee);
   padding: 0.55rem 0.25rem 0.25rem;
+}
+
+/* —— 장치 제어 사이드 도크 (3D 스테이지 높이 정렬) —— */
+.stageRow {
+  display: flex;
+  align-items: stretch;
+  gap: 0.75rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.stageRow .stage {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.sideDock {
+  --handle-w: 48px;
+  --panel-w: min(380px, 36vw);
+  --dock-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  position: relative;
+  z-index: 5;
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  align-self: stretch;
+  max-height: 100%;
+  min-height: 0;
+  filter: drop-shadow(-8px 0 22px rgba(15, 23, 42, 0.1));
+}
+
+.sideDockOpen,
+.sideDockClosed {
+  transform: none;
+}
+
+.sideHandle {
+  flex: 0 0 var(--handle-w);
+  width: var(--handle-w);
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem;
+  margin: 0;
+  padding: 1rem 0.35rem;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  cursor: pointer;
+  color: var(--text);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), #eef6ef);
+  box-shadow: var(--shadow-sm);
+  transition:
+    background 0.45s var(--dock-ease),
+    box-shadow 0.45s var(--dock-ease),
+    border-radius 0.45s var(--dock-ease),
+    border-color 0.35s ease;
+}
+
+.sideDockOpen .sideHandle {
+  border-radius: 18px 0 0 18px;
+  border-right: 0;
+  background: linear-gradient(180deg, #ffffff, #e8f3ea);
+  box-shadow: -4px 0 18px rgba(28, 56, 36, 0.1);
+}
+
+.sideHandle:hover {
+  border-color: rgba(47, 158, 99, 0.35);
+}
+
+.sideHandle:focus-visible {
+  outline: 2px solid rgba(47, 158, 99, 0.55);
+  outline-offset: 2px;
+}
+
+.sideHandleIcon {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  color: var(--green);
+  background: rgba(47, 158, 99, 0.12);
+  transition: transform 0.45s var(--dock-ease), background 0.35s ease;
+}
+
+.sideDockOpen .sideHandleIcon {
+  transform: scale(1.06);
+  background: rgba(47, 158, 99, 0.18);
+}
+
+.sideHandleLabel {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font-size: 0.78rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  transition: color 0.35s ease, letter-spacing 0.45s var(--dock-ease);
+}
+
+.sideDockOpen .sideHandleLabel {
+  color: var(--text);
+  letter-spacing: 0.12em;
+}
+
+.sideHandleChevron {
+  display: grid;
+  place-items: center;
+  color: var(--green);
+  transition: transform 0.55s var(--dock-ease);
+}
+
+.sideDockClosed .sideHandleChevron {
+  animation: handlePulse 2.4s ease-in-out infinite;
+}
+
+@keyframes handlePulse {
+  0%,
+  100% {
+    opacity: 0.7;
+    transform: translateX(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateX(-3px);
+  }
+}
+
+.sidePanel {
+  width: 0;
+  max-width: var(--panel-w);
+  height: auto;
+  align-self: stretch;
+  overflow: hidden;
+  opacity: 0;
+  padding: 0;
+  border: 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), #f3f8f3 40%, #eef5ee);
+  transform: translate3d(8px, 0, 0);
+  pointer-events: none;
+  transition:
+    width 0.55s var(--dock-ease),
+    opacity 0.4s var(--dock-ease),
+    padding 0.45s var(--dock-ease),
+    transform 0.55s var(--dock-ease),
+    border-color 0.35s ease;
+}
+
+.sideDockOpen .sidePanel {
+  width: var(--panel-w);
+  opacity: 1;
+  padding: 1.05rem 1rem 1.35rem;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--line);
+  border-left: 0;
+  border-radius: 0 18px 18px 0;
+  transform: translate3d(0, 0, 0);
+  pointer-events: auto;
+}
+
+.sideDockClosed .sidePanel {
+  width: 0;
+  opacity: 0;
+  padding: 0;
+  pointer-events: none;
+}
+
+.sidePanelHead {
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(28, 56, 36, 0.08);
+}
+
+.sidePanelHead h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 740;
+  letter-spacing: -0.03em;
+}
+
+@media (max-width: 900px) {
+  .stageRow {
+    flex-direction: column;
+    gap: 0.85rem;
+  }
+
+  .sideDock {
+    width: 100%;
+  }
+
+  .sideHandle {
+    flex-direction: row;
+    width: 100%;
+    min-height: 48px;
+    border-radius: 16px;
+    writing-mode: horizontal-tb;
+  }
+
+  .sideHandleLabel {
+    writing-mode: horizontal-tb;
+    letter-spacing: 0.02em;
+  }
+
+  .sideDockOpen .sideHandle {
+    border-radius: 16px 16px 0 0;
+    border-right: 1px solid var(--line);
+    border-bottom: 0;
+  }
+
+  .sideDockOpen .sidePanel {
+    width: 100%;
+    max-width: none;
+    max-height: min(70vh, 640px);
+    border-left: 1px solid var(--line);
+    border-radius: 0 0 16px 16px;
+  }
 }
 
 .controlStack {
