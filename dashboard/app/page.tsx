@@ -267,7 +267,9 @@ export default function HomePage() {
             </div>
             <HabitatScene
               t={temp}
+              h={hum}
               soil={data?.soil ?? null}
+              cds={data?.cds ?? null}
               fan={fanOn}
               rgb={rgbKind}
             />

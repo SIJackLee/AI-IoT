@@ -3,13 +3,15 @@
 import { Component, useMemo, useRef, type ReactNode } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
-import { DoubleSide, ExtrudeGeometry, Path, Quaternion, Shape, Vector3, type Group, type Mesh, type MeshBasicMaterial } from "three";
+import { DoubleSide, ExtrudeGeometry, Path, Quaternion, Shape, Vector3, type Group, type Mesh, type MeshBasicMaterial, type MeshStandardMaterial, type PointLight } from "three";
 import type { RgbKind } from "./rgb";
 import styles from "./motion.module.css";
 
 type Props = {
   t: number | null;
+  h: number | null;
   soil: number | null;
+  cds: number | null;
   fan: boolean;
   rgb: RgbKind;
 };
@@ -149,7 +151,6 @@ function Box({
 
 function FanRotor11({ spinning, hot }: { spinning: boolean; hot: boolean }) {
   const ref = useRef<Group>(null);
-  // 얇은 검정 블레이드 → 날개 사이 빈 공간
   const bladeGeo = useMemo(() => {
     const shape = new Shape();
     shape.moveTo(0.08, -0.008);
@@ -172,12 +173,11 @@ function FanRotor11({ spinning, hot }: { spinning: boolean; hot: boolean }) {
 
   useFrame((_, dt) => {
     if (!ref.current || !spinning) return;
-    ref.current.rotation.z += dt * (hot ? 14 : 7);
+    ref.current.rotation.z += dt * (hot ? 16 : 9);
   });
 
   return (
     <group position={[0, 1.05, -0.575]}>
-      {/* 외곽 프레임만 — 중앙 개방(공기 통로) */}
       <mesh>
         <torusGeometry args={[0.355, 0.022, 10, 48]} />
         <meshStandardMaterial color="#1e293b" roughness={0.45} metalness={0.08} />
@@ -193,9 +193,9 @@ function FanRotor11({ spinning, hot }: { spinning: boolean; hot: boolean }) {
           return (
             <mesh key={i} geometry={bladeGeo} rotation={[0, 0, a]}>
               <meshStandardMaterial
-                color={spinning ? "#0a0a0a" : "#111827"}
+                color={spinning ? "#050505" : "#111827"}
                 roughness={0.55}
-                metalness={0.12}
+                metalness={spinning ? 0.2 : 0.12}
               />
             </mesh>
           );
@@ -209,6 +209,199 @@ function FanRotor11({ spinning, hot }: { spinning: boolean; hot: boolean }) {
           <meshStandardMaterial color="#64748b" roughness={0.35} metalness={0.35} />
         </mesh>
       </group>
+    </group>
+  );
+}
+
+/** 팬 ON 시 통기구→내부 공기 입자 */
+function AirflowParticles({ active, boost }: { active: boolean; boost: boolean }) {
+  const group = useRef<Group>(null);
+  const seeds = useMemo(
+    () =>
+      Array.from({ length: 28 }, (_, i) => ({
+        id: i,
+        x: (Math.random() - 0.5) * 0.55,
+        y: 0.75 + Math.random() * 0.55,
+        z: -0.55 + Math.random() * 0.2,
+        s: 0.012 + Math.random() * 0.018,
+        phase: Math.random() * Math.PI * 2,
+      })),
+    [],
+  );
+
+  useFrame((_, dt) => {
+    const g = group.current;
+    if (!g) return;
+    g.visible = active;
+    if (!active) return;
+    const speed = boost ? 1.8 : 1.1;
+    g.children.forEach((child, i) => {
+      const seed = seeds[i];
+      child.position.z += dt * speed * 0.55;
+      child.position.x = seed.x + Math.sin(child.position.z * 4 + seed.phase) * 0.04;
+      child.position.y = seed.y + Math.cos(child.position.z * 3 + seed.phase) * 0.03;
+      if (child.position.z > 0.55) {
+        child.position.z = -0.58;
+        child.position.x = seed.x;
+        child.position.y = seed.y;
+      }
+      const mat = (child as Mesh).material as MeshBasicMaterial;
+      mat.opacity = active ? 0.15 + (0.55 - Math.abs(child.position.z)) * 0.35 : 0;
+    });
+  });
+
+  return (
+    <group ref={group} visible={false}>
+      {seeds.map((p) => (
+        <mesh key={p.id} position={[p.x, p.y, p.z]}>
+          <sphereGeometry args={[p.s, 6, 6]} />
+          <meshBasicMaterial color="#93c5c9" transparent opacity={0.25} depthWrite={false} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+/** 고습 시 내부 미스트 */
+function HumidityMist({ level }: { level: number | null }) {
+  const group = useRef<Group>(null);
+  const active = level !== null && level >= 65;
+  const seeds = useMemo(
+    () =>
+      Array.from({ length: 16 }, (_, i) => ({
+        id: i,
+        x: (Math.random() - 0.5) * 0.9,
+        z: (Math.random() - 0.5) * 0.8,
+        y0: -0.2 + Math.random() * 0.4,
+        phase: Math.random() * Math.PI * 2,
+      })),
+    [],
+  );
+
+  useFrame(({ clock }) => {
+    const g = group.current;
+    if (!g) return;
+    g.visible = active;
+    if (!active) return;
+    const t = clock.elapsedTime;
+    g.children.forEach((child, i) => {
+      const s = seeds[i];
+      child.position.y = s.y0 + ((t * 0.12 + s.phase) % 1.2);
+      const mat = (child as Mesh).material as MeshBasicMaterial;
+      mat.opacity = 0.08 + Math.sin(t * 2 + s.phase) * 0.04;
+    });
+  });
+
+  return (
+    <group ref={group} visible={false}>
+      {seeds.map((p) => (
+        <mesh key={p.id} position={[p.x, p.y0, p.z]}>
+          <sphereGeometry args={[0.07, 8, 8]} />
+          <meshBasicMaterial color="#7dd3fc" transparent opacity={0.1} depthWrite={false} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+function RgbStrip({ kind }: { kind: RgbKind }) {
+  const meshRef = useRef<Mesh>(null);
+  const lightRef = useRef<PointLight>(null);
+  const on = kind !== "off";
+  const hex = RGB_COLOR[kind];
+
+  useFrame(({ clock }) => {
+    const mesh = meshRef.current;
+    if (!mesh) return;
+    const mat = mesh.material as MeshStandardMaterial;
+    if (!on) {
+      mat.emissiveIntensity = 0;
+      if (lightRef.current) lightRef.current.intensity = 0;
+      return;
+    }
+    const pulse =
+      kind === "red"
+        ? 1.4 + Math.sin(clock.elapsedTime * 6) * 0.7
+        : kind === "amber"
+          ? 1.2 + Math.sin(clock.elapsedTime * 3.2) * 0.45
+          : 1.1 + Math.sin(clock.elapsedTime * 2.2) * 0.25;
+    mat.emissiveIntensity = pulse;
+    if (lightRef.current) lightRef.current.intensity = pulse * 0.9;
+  });
+
+  return (
+    <group>
+      <mesh ref={meshRef} position={[0, 1.4, 0.15]}>
+        <boxGeometry args={[0.9, 0.05, 0.12]} />
+        <meshStandardMaterial
+          color={hex}
+          emissive={hex}
+          emissiveIntensity={on ? 1.2 : 0}
+          roughness={0.35}
+        />
+      </mesh>
+      <pointLight
+        ref={lightRef}
+        position={[0, 1.5, 0.3]}
+        intensity={on ? 1.1 : 0}
+        color={hex}
+        distance={4}
+      />
+    </group>
+  );
+}
+
+function SensorBank({
+  t,
+  soil,
+  cds,
+}: {
+  t: number | null;
+  soil: number | null;
+  cds: number | null;
+}) {
+  const dhtRef = useRef<Mesh>(null);
+  const soilRef = useRef<Mesh>(null);
+  const cdsRef = useRef<Mesh>(null);
+
+  useFrame(({ clock }) => {
+    const u = clock.elapsedTime;
+    if (dhtRef.current) {
+      const hot = t !== null && t >= 28;
+      (dhtRef.current.material as MeshStandardMaterial).emissiveIntensity =
+        hot ? 0.55 + Math.sin(u * 5) * 0.35 : 0.12 + Math.sin(u * 1.5) * 0.05;
+    }
+    if (soilRef.current) {
+      const dry = soil !== null && soil <= 27;
+      (soilRef.current.material as MeshStandardMaterial).emissiveIntensity =
+        dry ? 0.5 + Math.sin(u * 4) * 0.3 : 0.08;
+      (soilRef.current.material as MeshStandardMaterial).color.set(
+        dry ? "#a16207" : "#8b6b4a",
+      );
+    }
+    if (cdsRef.current) {
+      const dark = cds !== null && cds <= 500;
+      const bright = cds !== null ? Math.min(1, cds / 2000) : 0.3;
+      (cdsRef.current.material as MeshStandardMaterial).emissiveIntensity = dark
+        ? 0.15 + Math.sin(u * 3) * 0.1
+        : 0.25 + bright * 0.7;
+    }
+  });
+
+  return (
+    <group position={[-0.72, 0.9, 0.15]}>
+      <mesh ref={dhtRef} position={[0, 0, 0.22]}>
+        <boxGeometry args={[0.08, 0.16, 0.14]} />
+        <meshStandardMaterial color="#3b82c4" emissive="#3b82c4" emissiveIntensity={0.15} />
+      </mesh>
+      <mesh ref={soilRef}>
+        <boxGeometry args={[0.08, 0.2, 0.12]} />
+        <meshStandardMaterial color="#8b6b4a" emissive="#a16207" emissiveIntensity={0.08} />
+      </mesh>
+      <mesh ref={cdsRef} position={[0, 0, -0.22]}>
+        <sphereGeometry args={[0.06, 12, 12]} />
+        <meshStandardMaterial color="#e0a100" emissive="#e0a100" emissiveIntensity={0.2} />
+      </mesh>
     </group>
   );
 }
@@ -326,10 +519,17 @@ function MidShelfAcrylic({ y = 0.05 }: { y?: number }) {
   );
 }
 
-function PeaPlant({ wilt, soilLevel }: { wilt: boolean; soilLevel: number }) {
+function PeaPlant({
+  wilt,
+  soilLevel,
+  fan,
+}: {
+  wilt: boolean;
+  soilLevel: number;
+  fan: boolean;
+}) {
   const group = useRef<Group>(null);
   const leaf = wilt ? "#c9851a" : "#3cb371";
-  // 절두원뿔(원뿔 꼭지 절단)을 뒤집은 화분: 위 넓고 아래 좁음
   const potTopR = SHELF_HOLE_R * 1.12;
   const potBotR = SHELF_HOLE_R * 0.72;
   const potH = 0.3;
@@ -339,31 +539,30 @@ function PeaPlant({ wilt, soilLevel }: { wilt: boolean; soilLevel: number }) {
 
   useFrame(({ clock }) => {
     if (!group.current) return;
-    const sway = Math.sin(clock.elapsedTime * (wilt ? 2.4 : 1.2)) * (wilt ? 0.07 : 0.025);
+    const wind = fan ? 3.6 : wilt ? 2.4 : 1.2;
+    const amp = fan ? 0.09 : wilt ? 0.07 : 0.025;
+    const sway = Math.sin(clock.elapsedTime * wind) * amp;
     group.current.rotation.z = (wilt ? 0.28 : 0) + sway;
+    group.current.rotation.x = fan ? Math.sin(clock.elapsedTime * wind * 0.7) * 0.04 : 0;
   });
 
-  // 선반 y=0.05: 테두리가 구멍에 걸쳐 앉고 몸통은 아래로 통과
   const shelfY = 0.05;
   const rimY = shelfY + SHELF_H / 2;
   const potCenterY = rimY - potH * 0.35;
 
   return (
     <group position={[0, potCenterY, 0]}>
-      {/* 화분: 절두원뿔 뒤집음 — 위 넓고 아래 좁음 */}
       <mesh>
         <cylinderGeometry args={[potTopR, potBotR, potH, 32]} />
         <meshStandardMaterial color="#6b7280" roughness={0.72} />
       </mesh>
-      {/* 겉테두리(선반에 걸치는 립) */}
       <mesh position={[0, potH * 0.48, 0]}>
         <cylinderGeometry args={[potTopR * 1.08, potTopR * 1.02, 0.025, 32]} />
         <meshStandardMaterial color="#4b5563" roughness={0.65} />
       </mesh>
-      {/* 흙 */}
       <mesh position={[0, potH * 0.12, 0]}>
         <cylinderGeometry args={[soilTopR, soilBotR * 1.05, dirtH, 24]} />
-        <meshStandardMaterial color="#8b6b4a" roughness={0.95} />
+        <meshStandardMaterial color={wilt ? "#a07850" : "#8b6b4a"} roughness={0.95} />
       </mesh>
       <group ref={group} position={[0, potH * 0.2, 0]}>
         <mesh position={[0, 0.28, 0]}>
@@ -385,23 +584,28 @@ function PeaPlant({ wilt, soilLevel }: { wilt: boolean; soilLevel: number }) {
   );
 }
 
-function KitTower({ t, soil, fan, rgb }: Props) {
+function KitTower({ t, h, soil, cds, fan, rgb }: Props) {
   const wilt = soil !== null && soil < 27;
   const hot = t !== null && t >= 28;
-  const rgbOn = rgb !== "off";
-  const rgbHex = RGB_COLOR[rgb];
   const soilLevel = soil === null ? 0.4 : Math.max(0, Math.min(1, soil / 100));
   const heatRef = useRef<Mesh>(null);
+  const lcdRef = useRef<Mesh>(null);
 
   useFrame(({ clock }) => {
     const mesh = heatRef.current;
-    if (!mesh) return;
-    if (!hot) {
-      mesh.visible = false;
-      return;
+    if (mesh) {
+      if (!hot) {
+        mesh.visible = false;
+      } else {
+        mesh.visible = true;
+        (mesh.material as MeshBasicMaterial).opacity =
+          0.1 + Math.sin(clock.elapsedTime * 3.2) * 0.06;
+      }
     }
-    mesh.visible = true;
-    (mesh.material as MeshBasicMaterial).opacity = 0.1 + Math.sin(clock.elapsedTime * 3) * 0.05;
+    if (lcdRef.current) {
+      (lcdRef.current.material as MeshStandardMaterial).emissiveIntensity =
+        0.35 + Math.sin(clock.elapsedTime * 1.8) * 0.12 + (fan ? 0.15 : 0);
+    }
   });
 
   return (
@@ -414,44 +618,28 @@ function KitTower({ t, soil, fan, rgb }: Props) {
       <Box args={[0.04, 2.7, 1.2]} position={[0.72, 0, 0]} color="#dceadf" opacity={0.3} roughness={0.15} />
       <Box args={[1.45, 0.04, 1.28]} position={[0, 1.36, 0]} color="#dceadf" opacity={0.35} roughness={0.15} />
 
-      <Box
-        args={[0.9, 0.05, 0.12]}
-        position={[0, 1.4, 0.15]}
-        color={rgbHex}
-        emissive={rgbOn ? rgbHex : undefined}
-        emissiveIntensity={rgbOn ? 1.6 : 0}
-      />
-      {rgbOn ? <pointLight position={[0, 1.5, 0.3]} intensity={1.2} color={rgbHex} distance={4} /> : null}
+      <RgbStrip kind={rgb} />
 
-      {/* 중간 검정 아크릴 선반(중앙 원형 구멍) + 좌측 배선 구멍 */}
       <MidShelfAcrylic y={0.05} />
       <SquarePass position={[-0.52, 0.05, 0.12]} size={0.075} depth={0.055} />
 
-      <PeaPlant wilt={wilt} soilLevel={soilLevel} />
+      <PeaPlant wilt={wilt} soilLevel={soilLevel} fan={fan} />
+      <HumidityMist level={h} />
+      <AirflowParticles active={fan} boost={hot} />
 
-      {/* LCD 중하단 */}
       <group position={[0, -0.55, 0.62]}>
         <Box args={[0.85, 0.42, 0.06]} color="#1e293b" />
-        <mesh position={[0, 0.02, 0.035]}>
+        <mesh ref={lcdRef} position={[0, 0.02, 0.035]}>
           <planeGeometry args={[0.72, 0.28]} />
           <meshStandardMaterial color="#86efac" emissive="#22c55e" emissiveIntensity={0.5} />
         </mesh>
       </group>
 
-      {/* 좌측 센서 가로 (DHT / Soil / CDS) */}
-      <group position={[-0.72, 0.9, 0.15]}>
-        <Box args={[0.08, 0.16, 0.14]} position={[0, 0, 0.22]} color="#3b82c4" />
-        <Box args={[0.08, 0.2, 0.12]} color="#8b6b4a" />
-        <mesh position={[0, 0, -0.22]}>
-          <sphereGeometry args={[0.06, 12, 12]} />
-          <meshStandardMaterial color="#e0a100" emissive="#e0a100" emissiveIntensity={0.15} />
-        </mesh>
-      </group>
+      <SensorBank t={t} soil={soil} cds={cds} />
 
       <CrossVents />
       <FanRotor11 spinning={fan} hot={hot} />
 
-      {/* 후면 좌측하단 배선 구멍 */}
       <SquarePass
         position={[-0.48, -1.12, -0.62]}
         size={0.08}
@@ -459,11 +647,9 @@ function KitTower({ t, soil, fan, rgb }: Props) {
         rotation={[Math.PI / 2, 0, 0]}
       />
 
-      {/* MCU + 하단 핀 헤더 (배선이 차례로 연결) */}
       <group position={[0, -0.95, -0.55]}>
         <Box args={[0.7, 0.45, 0.08]} color="#166534" />
         <Box args={[0.35, 0.12, 0.05]} position={[0, 0.05, 0.05]} color="#94a3b8" />
-        {/* 보드 하단 핀 열 */}
         {[-0.22, -0.11, 0, 0.11, 0.22].map((x, i) => (
           <Box
             key={i}
@@ -476,10 +662,6 @@ function KitTower({ t, soil, fan, rgb }: Props) {
         ))}
       </group>
 
-      {/*
-        센서 → 선반 좌측 구멍 → 후면 좌하단 구멍 → MCU 하단 핀 순 배선
-        (3색: DHT / Soil / CDS)
-      */}
       <WirePath
         color="#2563eb"
         radius={0.011}
@@ -538,11 +720,21 @@ function KitTower({ t, soil, fan, rgb }: Props) {
 }
 
 function HabitatWorld(props: Props) {
+  const amb = useRef<import("three").AmbientLight>(null);
+  const sun = useRef<import("three").DirectionalLight>(null);
+
+  useFrame(() => {
+    const cds = props.cds;
+    const bright = cds === null ? 0.55 : Math.max(0.2, Math.min(1, cds / 1800));
+    if (amb.current) amb.current.intensity = 0.45 + bright * 0.55;
+    if (sun.current) sun.current.intensity = 0.55 + bright * 0.85;
+  });
+
   return (
     <>
       <color attach="background" args={["#eef4ee"]} />
-      <ambientLight intensity={0.8} />
-      <directionalLight position={[3.2, 5, 2.5]} intensity={1.05} />
+      <ambientLight ref={amb} intensity={0.8} />
+      <directionalLight ref={sun} position={[3.2, 5, 2.5]} intensity={1.05} />
       <directionalLight position={[-2.5, 2, -1.2]} intensity={0.35} color="#93c5c9" />
       <KitTower {...props} />
       <OrbitControls
@@ -565,6 +757,8 @@ function HabitatWorld(props: Props) {
 export function HabitatScene3D(props: Props) {
   const soilLabel = props.soil === null ? "—" : `${Math.round(props.soil)}%`;
   const tLabel = props.t === null ? "—" : `${props.t.toFixed(1)}°C`;
+  const hLabel = props.h === null ? "—" : `${Math.round(props.h)}%`;
+  const cdsLabel = props.cds === null ? "—" : `${Math.round(props.cds)}`;
 
   return (
     <div className={styles.habitat3d}>
@@ -588,6 +782,8 @@ export function HabitatScene3D(props: Props) {
       <div className={styles.habitatChips} aria-hidden>
         <span>토양 {soilLabel}</span>
         <span>온도 {tLabel}</span>
+        <span>습도 {hLabel}</span>
+        <span>조도 {cdsLabel}</span>
         <span>팬 {props.fan ? "ON" : "off"}</span>
         <span>RGB {props.rgb.toUpperCase()}</span>
         <span className={styles.habitatHint}>스크롤 줌 · 드래그 회전</span>

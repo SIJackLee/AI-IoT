@@ -8,7 +8,9 @@ export { classifyRgb } from "./rgb";
 
 type HabitatProps = {
   t: number | null;
+  h: number | null;
   soil: number | null;
+  cds: number | null;
   fan: boolean;
   rgb: import("./rgb").RgbKind;
 };
