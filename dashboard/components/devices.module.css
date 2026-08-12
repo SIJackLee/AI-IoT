@@ -230,6 +230,119 @@
   color: var(--muted);
 }
 
+.demoBtn {
+  position: relative;
+  width: 100%;
+  min-height: 96px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background:
+    radial-gradient(160px 90px at 20% 40%, rgba(47, 158, 99, 0.12), transparent 65%),
+    linear-gradient(180deg, #ffffff, #eef6ef);
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.85rem 1rem;
+  text-align: left;
+  transition:
+    transform 0.18s var(--ease-spring),
+    border-color 0.2s ease,
+    box-shadow 0.25s ease,
+    color 0.2s ease;
+}
+
+.demoBtn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+.demoBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.demoBtnOn {
+  color: var(--accent);
+  border-color: rgba(31, 122, 77, 0.4);
+  background:
+    radial-gradient(180px 110px at 18% 40%, rgba(47, 158, 99, 0.2), transparent 62%),
+    linear-gradient(180deg, #e8f7ee, #ffffff);
+  box-shadow: 0 0 0 3px rgba(47, 158, 99, 0.12);
+}
+
+.demoIcon {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+}
+
+.demoSpin {
+  animation: softFloat 2.4s ease-in-out infinite;
+}
+
+.demoCopy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+}
+
+.demoCopy strong {
+  font-size: 1.05rem;
+  font-weight: 760;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.demoCopy span {
+  font-size: 0.8rem;
+  font-weight: 650;
+}
+
+.demoCopy small {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.demoSteps {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.35rem;
+}
+
+.demoChip {
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 740;
+  padding: 0.4rem 0.2rem;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.demoChip:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: var(--line-strong);
+}
+
+.demoChip:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.demoChipOn {
+  color: #fff;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
 .buzzerBtn {
   position: relative;
   width: 100%;

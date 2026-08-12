@@ -35,6 +35,7 @@ ESP32  --HTTPS-->  Firebase RTDB  <--HTTPS--  PC 브라우저/Vercel
   "rgb": { "r": 0, "g": 0, "b": 0 },
   "buzzer": 0,
   "key": 1,
+  "demo": "off",
   "ts": 1710000000
 }
 ```
@@ -42,9 +43,20 @@ ESP32  --HTTPS-->  Firebase RTDB  <--HTTPS--  PC 브라우저/Vercel
 ### command 예
 
 ```json
-{ "fan": 1, "rgb": { "r": 255, "g": 0, "b": 0 }, "buzzer": 0, "lcd": "Hello" }
+{ "fan": 1, "rgb": { "r": 255, "g": 0, "b": 0 }, "buzzer": 0, "lcd": "Hello", "demo": "off" }
 ```
 
+### demo 모드
+
+| 값 | 동작 |
+|----|------|
+| `off` | 수동 제어 |
+| `led` | RGB 빨→초→파→흰→끄기 (1.5초) |
+| `fan` | 팬 5초 ON / 5초 OFF |
+| `lcd` | LCD 문구 순환 (2초) |
+| `all` | LED+팬+LCD 동시 루프 |
+
+DEMO 활성 중에는 수동 fan/rgb/lcd는 무시됩니다. `전체 끄기`는 `demo:off` 포함.
 ## Firebase 콘솔에서 할 일 (사용자)
 
 1. https://console.firebase.google.com/ 에서 프로젝트 생성  

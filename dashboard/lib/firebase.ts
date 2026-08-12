@@ -7,16 +7,20 @@ export type Telemetry = {
   buzzer?: number;
   key?: number;
   rgb?: { r?: number; g?: number; b?: number };
+  demo?: string;
   ip?: string;
   rssi?: number;
   ts?: number;
 };
+
+export type DemoMode = "off" | "led" | "fan" | "lcd" | "all";
 
 export type Command = {
   fan?: number;
   buzzer?: number;
   rgb?: { r: number; g: number; b: number };
   lcd?: string;
+  demo?: DemoMode;
 };
 
 function dbRoot() {

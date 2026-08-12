@@ -16,6 +16,7 @@ import { FanControl } from "@/components/FanControl";
 import { RgbPad } from "@/components/RgbPad";
 import { BuzzerPad } from "@/components/BuzzerPad";
 import { LcdPanel } from "@/components/LcdPanel";
+import { DemoPad, type DemoMode } from "@/components/DemoPad";
 import styles from "./page.module.css";
 
 type Point = {
@@ -115,6 +116,11 @@ function BarMeter({
   );
 }
 
+function normalizeDemo(v: string | undefined): DemoMode {
+  if (v === "led" || v === "fan" || v === "lcd" || v === "all" || v === "off") return v;
+  return "off";
+}
+
 export default function HomePage() {
   const [data, setData] = useState<Telemetry | null>(null);
   const [history, setHistory] = useState<Point[]>([]);
@@ -166,6 +172,7 @@ export default function HomePage() {
         g: data?.rgb?.g ?? 0,
         b: data?.rgb?.b ?? 0,
       },
+      demo: normalizeDemo(data?.demo),
     }),
     [data],
   );
@@ -205,6 +212,8 @@ export default function HomePage() {
     g: data?.rgb?.g ?? 0,
     b: data?.rgb?.b ?? 0,
   };
+  const demoMode = normalizeDemo(data?.demo);
+  const demoLock = demoMode !== "off";
   const keyPressed = data?.key === 0;
   const temp = valid(data?.t);
   const hum = valid(data?.h);
@@ -225,6 +234,7 @@ export default function HomePage() {
           <p className={styles.meta}>
             {data?.ip ? `ESP ${data.ip}` : "ESP —"} · RSSI {fmt(data?.rssi)} dBm · 키{" "}
             {keyPressed ? "눌림" : "대기"}
+            {demoLock ? ` · DEMO ${demoMode.toUpperCase()}` : ""}
           </p>
         </div>
         {error ? <p className={styles.error}>{error}</p> : null}
@@ -328,14 +338,25 @@ export default function HomePage() {
 
           <div className={styles.controlStack}>
             <div className={styles.deviceCard}>
+              <DemoPad
+                mode={demoMode}
+                disabled={busy}
+                onChange={(next) => send({ demo: next })}
+              />
+            </div>
+            <div className={styles.deviceCard}>
               <FanControl
                 on={fanOn}
-                disabled={busy}
+                disabled={busy || demoLock}
                 onToggle={(next) => send({ fan: next ? 1 : 0 })}
               />
             </div>
             <div className={styles.deviceCard}>
-              <RgbPad value={rgb} disabled={busy} onChange={(next) => send({ rgb: next })} />
+              <RgbPad
+                value={rgb}
+                disabled={busy || demoLock}
+                onChange={(next) => send({ rgb: next })}
+              />
             </div>
             <div className={styles.deviceCard}>
               <BuzzerPad disabled={busy} onBeep={beepOnce} />
@@ -344,7 +365,7 @@ export default function HomePage() {
               <LcdPanel
                 value={lcd}
                 preview={lcdPreview}
-                disabled={busy}
+                disabled={busy || demoLock}
                 onChange={setLcd}
                 onSend={() => send({ lcd: lcd.trim() })}
                 onClear={() => {
@@ -360,6 +381,7 @@ export default function HomePage() {
                 disabled={busy}
                 onClick={() =>
                   send({
+                    demo: "off",
                     fan: 0,
                     buzzer: 0,
                     rgb: { r: 0, g: 0, b: 0 },
