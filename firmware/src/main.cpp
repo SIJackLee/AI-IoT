@@ -77,9 +77,9 @@ static const float AUTO_T_OFF = 26.0f;
 static const float AUTO_H_ON = 70.0f;
 static const float AUTO_H_OFF = 60.0f;
 static const float AUTO_T_HOT = 30.0f;
-static const int AUTO_SOIL_DRY = 800;
-static const int AUTO_SOIL_OK = 1200;
-static const int AUTO_SOIL_CRIT = 600;
+static const int AUTO_SOIL_DRY = 27;   // ≈ ((4095-x)*100)/3000 기준
+static const int AUTO_SOIL_OK = 40;
+static const int AUTO_SOIL_CRIT = 20;
 static const int AUTO_CDS_DARK = 500;
 static const int AUTO_CDS_OK = 900;
 
@@ -271,10 +271,11 @@ bool demoOwnsLcd() {
 }
 
 int readSoilScaled() {
-  // 공중/건조 ≈ 4095 → 0, 습할수록 커지도록 반전
+  // 토양습도 %: ((4095 - raw) * 100) / 3000
   int raw = analogRead(PIN_SOIL);
   raw = constrain(raw, 0, 4095);
-  return 4095 - raw;
+  int pct = ((4095 - raw) * 100) / 3000;
+  return constrain(pct, 0, 100);
 }
 
 void showSensorLcd() {
@@ -298,7 +299,7 @@ void showSensorLcd() {
   } else {
     snprintf(l0, sizeof(l0), "T----C H----%%%c", modeMark);
   }
-  snprintf(l1, sizeof(l1), "S%-4d C%-4d F%d", soil, cds, fanState);
+  snprintf(l1, sizeof(l1), "S%3d%% C%-4d F%d", soil, cds, fanState);
 
   lcdLine0 = l0;
   lcdLine1 = l1;

@@ -12,9 +12,9 @@ export const AUTO_THRESH = {
   hOn: 70,
   hOff: 60,
   tHot: 30,
-  soilDry: 800,
-  soilOk: 1200,
-  soilCrit: 600,
+  soilDry: 27,
+  soilOk: 40,
+  soilCrit: 20,
   cdsDark: 500,
   cdsOk: 900,
 } as const;
@@ -207,9 +207,9 @@ export function AutoPad({ on, mode, eval: ev, sensors, disabled, onToggle }: Pro
             ]}
           />
           <Meter
-            label="토양"
+            label="토양 %"
             value={sensors.soil}
-            max={4095}
+            max={100}
             color="#8b6b4a"
             markers={[
               { at: AUTO_THRESH.soilCrit, tone: "hot" },

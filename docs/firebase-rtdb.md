@@ -42,7 +42,7 @@ ESP32  --HTTPS-->  Firebase RTDB  <--HTTPS--  PC 브라우저/Vercel
 }
 ```
 
-- `soil`은 ADC raw가 아니라 **`4095 - raw`** (건조≈0, 습함↑)
+- `soil`은 ADC raw가 아니라 **`((4095 - raw) * 100) / 3000`** (% , 0–100, 건조≈0)
 - `auto` / `mode` 설명은 [`docs/auto-control.md`](./auto-control.md) 참고
 
 ### command 예
@@ -63,7 +63,7 @@ ESP32  --HTTPS-->  Firebase RTDB  <--HTTPS--  PC 브라우저/Vercel
 
 DEMO와 AUTO는 동시에 켤 수 없습니다. AUTO 중 수동 fan/RGB/LCD는 무시됩니다.
 
-LCD 16×2는 **센서값 전용**입니다. (`Txx.xC Hxx%A` / `Sxxxx Cxxxx Fx`)  
+LCD 16×2는 **센서값 전용**입니다. (`Txx.xC Hxx%A` / `Sxx% Cxxxx Fx`)  
 끝 문자: `A`=AUTO, `!`=ALERT, `D`=DEMO.  
 대시보드에서 LCD 문구를 보낸 경우에만 임시 고정되며, 지우기 시 센서 화면으로 복귀합니다.
 ## Firebase 콘솔에서 할 일 (사용자)
