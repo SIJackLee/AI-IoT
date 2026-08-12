@@ -37,20 +37,27 @@ int buzzerState = 0;
 bool actuatorsReady = false;
 uint32_t actuatorsReadyAt = 0;
 
-bool lcdCustom = false;
+bool lcdUserLock = false;
 String lcdLine0 = "";
 String lcdLine1 = "";
+String lcdShown0 = "                ";
+String lcdShown1 = "                ";
 
 DemoMode demoMode = DEMO_OFF;
 uint8_t demoLedStep = 0;
-uint8_t demoLcdStep = 0;
 bool demoFanOn = false;
 uint32_t demoLedAt = 0;
 uint32_t demoFanAt = 0;
-uint32_t demoLcdAt = 0;
 bool demoNeedsKick = false;
 uint32_t lastCmdAt = 0;
 uint32_t lastTelAt = 0;
+uint32_t lastSensorLcdAt = 0;
+uint32_t lcdQuietUntil = 0;
+bool fanPwmReady = false;
+
+static const int FAN_PWM_CH = 0;
+static const uint32_t LCD_QUIET_FAN_MS = 450;
+static const uint32_t LCD_QUIET_RGB_MS = 220;
 
 String basePath() {
   return String("https://") + FIREBASE_HOST + "/smartfarm/" + DEVICE_ID;
@@ -87,9 +94,30 @@ DemoMode parseDemo(const String& body) {
   return demoMode;
 }
 
+void noteLcdQuiet(uint32_t ms) {
+  uint32_t until = millis() + ms;
+  if (until > lcdQuietUntil) lcdQuietUntil = until;
+}
+
+bool lcdIsQuiet() {
+  return millis() < lcdQuietUntil;
+}
+
+void ensureFanPwm() {
+  if (fanPwmReady) return;
+  ledcSetup(FAN_PWM_CH, 20000, 8);
+  ledcAttachPin(PIN_FAN, FAN_PWM_CH);
+  ledcWrite(FAN_PWM_CH, 0);
+  fanPwmReady = true;
+}
+
 void forceFanOff() {
-  pinMode(PIN_FAN, OUTPUT);
-  digitalWrite(PIN_FAN, LOW);
+  if (fanPwmReady) {
+    ledcWrite(FAN_PWM_CH, 0);
+  } else {
+    pinMode(PIN_FAN, OUTPUT);
+    digitalWrite(PIN_FAN, LOW);
+  }
   fanState = 0;
 }
 
@@ -105,17 +133,52 @@ void applyFan(int on) {
     forceFanOff();
     return;
   }
-  fanState = on ? 1 : 0;
-  digitalWrite(PIN_FAN, fanState ? HIGH : LOW);
+
+  int next = on ? 1 : 0;
+  if (next == fanState) return;
+
+  noteLcdQuiet(LCD_QUIET_FAN_MS);
+  ensureFanPwm();
+
+  if (next) {
+    // 소프트 기동: 전류 스파이크를 줄여 LCD 전압 딥 완화
+    for (int d = 32; d < 255; d += 32) {
+      ledcWrite(FAN_PWM_CH, d);
+      delay(18);
+    }
+    ledcWrite(FAN_PWM_CH, 255);
+  } else {
+    for (int d = 224; d >= 0; d -= 32) {
+      ledcWrite(FAN_PWM_CH, d < 0 ? 0 : d);
+      delay(12);
+    }
+    ledcWrite(FAN_PWM_CH, 0);
+  }
+  fanState = next;
 }
 
 void applyRgb(int r, int g, int b) {
-  rgbR = constrain(r, 0, 255);
-  rgbG = constrain(g, 0, 255);
-  rgbB = constrain(b, 0, 255);
-  digitalWrite(PIN_RGB_R, rgbR > 0 ? LOW : HIGH);
-  digitalWrite(PIN_RGB_G, rgbG > 0 ? LOW : HIGH);
-  digitalWrite(PIN_RGB_B, rgbB > 0 ? LOW : HIGH);
+  int nr = constrain(r, 0, 255);
+  int ng = constrain(g, 0, 255);
+  int nb = constrain(b, 0, 255);
+  if (nr == rgbR && ng == rgbG && nb == rgbB) return;
+
+  noteLcdQuiet(LCD_QUIET_RGB_MS);
+  // 채널을 살짝 시프트해 동시 전류 피크 완화
+  if (nr != rgbR) {
+    rgbR = nr;
+    digitalWrite(PIN_RGB_R, rgbR > 0 ? LOW : HIGH);
+    delay(2);
+  }
+  if (ng != rgbG) {
+    rgbG = ng;
+    digitalWrite(PIN_RGB_G, rgbG > 0 ? LOW : HIGH);
+    delay(2);
+  }
+  if (nb != rgbB) {
+    rgbB = nb;
+    digitalWrite(PIN_RGB_B, rgbB > 0 ? LOW : HIGH);
+  }
 }
 
 void applyBuzzer(int on) {
@@ -127,16 +190,32 @@ void applyBuzzer(int on) {
   }
 }
 
-void renderLcd() {
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print(lcdLine0.substring(0, 16));
-  lcd.setCursor(0, 1);
-  lcd.print(lcdLine1.substring(0, 16));
+String pad16(String s) {
+  if (s.length() > 16) s = s.substring(0, 16);
+  while (s.length() < 16) s += ' ';
+  return s;
+}
+
+// clear() 없이 덮어쓰기 — 백라이트 깜빡임·I2C 부하 감소
+void renderLcd(bool force = false) {
+  String a = pad16(lcdLine0);
+  String b = pad16(lcdLine1);
+  if (!force && a == lcdShown0 && b == lcdShown1) return;
+
+  if (force || a != lcdShown0) {
+    lcd.setCursor(0, 0);
+    lcd.print(a);
+    lcdShown0 = a;
+  }
+  if (force || b != lcdShown1) {
+    lcd.setCursor(0, 1);
+    lcd.print(b);
+    lcdShown1 = b;
+  }
 }
 
 void setCustomLcd(const String& msg) {
-  lcdCustom = true;
+  lcdUserLock = true;
   String m = msg;
   m.replace("\\n", "\n");
   int nl = m.indexOf('\n');
@@ -147,44 +226,70 @@ void setCustomLcd(const String& msg) {
     lcdLine0 = m.substring(0, 16);
     lcdLine1 = m.length() > 16 ? m.substring(16, 32) : "";
   }
-  while (lcdLine0.length() < 16) lcdLine0 += ' ';
-  while (lcdLine1.length() < 16) lcdLine1 += ' ';
-  renderLcd();
+  renderLcd(true);
 }
 
 void clearCustomLcd() {
-  lcdCustom = false;
+  lcdUserLock = false;
   lcdLine0 = "";
   lcdLine1 = "";
+}
+
+bool demoOwnsLcd() {
+  return false;
+}
+
+int readSoilScaled() {
+  // 공중/건조 ≈ 4095 → 0, 습할수록 커지도록 반전
+  int raw = analogRead(PIN_SOIL);
+  raw = constrain(raw, 0, 4095);
+  return 4095 - raw;
+}
+
+void showSensorLcd() {
+  if (lcdUserLock || !actuatorsReady) return;
+  if (lcdIsQuiet()) return;
+
+  TempAndHumidity th = dht.getTempAndHumidity();
+  float t = th.temperature;
+  float h = th.humidity;
+  int soil = readSoilScaled();
+  int cds = analogRead(PIN_CDS);
+
+  char l0[17], l1[17];
+  if (!isnan(t) && !isnan(h) && t > -900) {
+    snprintf(l0, sizeof(l0), "T%4.1fC H%4.0f%% ", t, h);
+  } else {
+    snprintf(l0, sizeof(l0), "T----C H----%% ");
+  }
+  snprintf(l1, sizeof(l1), "S%-4d C%-4d F%d", soil, cds, fanState);
+
+  lcdLine0 = l0;
+  lcdLine1 = l1;
+  renderLcd(false);
 }
 
 void stopDemoOutputs() {
   applyFan(0);
   applyRgb(0, 0, 0);
   demoLedStep = 0;
-  demoLcdStep = 0;
   demoFanOn = false;
-  if (lcdCustom) clearCustomLcd();
 }
 
 void setDemoMode(DemoMode next) {
   if (next == demoMode) return;
-  DemoMode prev = demoMode;
   demoMode = next;
   demoLedStep = 0;
-  demoLcdStep = 0;
   demoFanOn = false;
   demoNeedsKick = (next != DEMO_OFF);
 
-  if (prev != DEMO_OFF && next == DEMO_OFF) {
+  if (next == DEMO_OFF) {
     stopDemoOutputs();
-    setCustomLcd("DEMO OFF\nManual OK");
-  } else if (next != DEMO_OFF) {
+    // 사용자 고정 문구가 없으면 즉시 센서 화면
+    if (!lcdUserLock) showSensorLcd();
+  } else {
     applyFan(0);
     applyRgb(0, 0, 0);
-    String title = String("DEMO ") + demoName(next);
-    title.toUpperCase();
-    setCustomLcd(title + "\nRunning...");
   }
   Serial.printf("Demo => %s\n", demoName(demoMode));
 }
@@ -247,56 +352,22 @@ void applyLedStep(uint8_t step) {
   }
 }
 
-void applyLcdStep(uint8_t step) {
-  TempAndHumidity th = dht.getTempAndHumidity();
-  float t = th.temperature;
-  float h = th.humidity;
-  char l0[17], l1[17];
-  switch (step % 4) {
-    case 0:
-      snprintf(l0, sizeof(l0), "DEMO LCD       ");
-      snprintf(l1, sizeof(l1), "Camtic AI-IoT  ");
-      break;
-    case 1:
-      if (!isnan(t) && !isnan(h))
-        snprintf(l0, sizeof(l0), "T%.0fC H%.0f%%     ", t, h);
-      else
-        snprintf(l0, sizeof(l0), "DHT --          ");
-      snprintf(l1, sizeof(l1), "Sensor live    ");
-      break;
-    case 2:
-      snprintf(l0, sizeof(l0), "WiFi IP        ");
-      snprintf(l1, sizeof(l1), "%-16s", WiFi.localIP().toString().c_str());
-      break;
-    default:
-      snprintf(l0, sizeof(l0), "FAN %s         ", fanState ? "ON " : "OFF");
-      snprintf(l1, sizeof(l1), "Mode %-9s", demoName(demoMode));
-      break;
-  }
-  lcdCustom = true;
-  lcdLine0 = l0;
-  lcdLine1 = l1;
-  renderLcd();
-}
-
 void runDemo(uint32_t now) {
   if (demoMode == DEMO_OFF || !actuatorsReady) return;
 
+  // LCD DEMO는 별도 화면 순환 없이 센서 표시 유지 (showSensorLcd)
   const bool doLed = (demoMode == DEMO_LED || demoMode == DEMO_ALL);
   const bool doFan = (demoMode == DEMO_FAN || demoMode == DEMO_ALL);
-  const bool doLcd = (demoMode == DEMO_LCD || demoMode == DEMO_ALL);
 
   if (demoNeedsKick) {
     demoNeedsKick = false;
     demoLedAt = now;
     demoFanAt = now;
-    demoLcdAt = now;
     if (doLed) applyLedStep(demoLedStep);
     if (doFan) {
       demoFanOn = true;
       applyFan(1);
     }
-    if (doLcd) applyLcdStep(demoLcdStep);
   }
 
   if (doLed && now - demoLedAt >= 1500) {
@@ -309,12 +380,6 @@ void runDemo(uint32_t now) {
     demoFanAt = now;
     demoFanOn = !demoFanOn;
     applyFan(demoFanOn ? 1 : 0);
-  }
-
-  if (doLcd && now - demoLcdAt >= 2000) {
-    demoLcdAt = now;
-    demoLcdStep = (demoLcdStep + 1) % 4;
-    applyLcdStep(demoLcdStep);
   }
 }
 
@@ -371,7 +436,7 @@ void publishTelemetry() {
   float h = th.humidity;
   if (isnan(t)) t = -999;
   if (isnan(h)) h = -999;
-  int soil = analogRead(PIN_SOIL);
+  int soil = readSoilScaled();
   int cds = analogRead(PIN_CDS);
   int key = digitalRead(PIN_KEY);
 
@@ -385,7 +450,7 @@ void publishTelemetry() {
            fanState, rgbR, rgbG, rgbB,
            buzzerState, key,
            demoName(demoMode),
-           lcdCustom ? "true" : "false",
+           lcdUserLock ? "true" : "false",
            WiFi.localIP().toString().c_str(),
            WiFi.RSSI(),
            (unsigned long)(millis() / 1000));
@@ -394,15 +459,7 @@ void publishTelemetry() {
   firebasePut("/status",
               String("{\"online\":true,\"ts\":") + String(millis() / 1000) + "}");
 
-  if (!lcdCustom && demoMode == DEMO_OFF) {
-    char l0[17], l1[17];
-    if (t > -900) snprintf(l0, sizeof(l0), "T%.0fC H%.0f%%     ", t, h);
-    else snprintf(l0, sizeof(l0), "DHT --          ");
-    snprintf(l1, sizeof(l1), "S%-4d C%-4d F%d ", soil, cds, fanState);
-    lcdLine0 = l0;
-    lcdLine1 = l1;
-    renderLcd();
-  }
+  showSensorLcd();
 }
 
 void setup() {
@@ -455,9 +512,8 @@ void loop() {
     if (now >= actuatorsReadyAt) {
       actuatorsReady = true;
       Serial.println("Actuators armed");
-      if (lcdCustom && lcdLine0.startsWith("WiFi OK")) {
-        clearCustomLcd();
-      }
+      clearCustomLcd();
+      showSensorLcd();
     } else {
       delay(50);
       return;
@@ -482,6 +538,11 @@ void loop() {
   }
 
   runDemo(millis());
+
+  if (now - lastSensorLcdAt >= 1500) {
+    lastSensorLcdAt = now;
+    showSensorLcd();
+  }
 
   if (now - lastTelAt >= 4000) {
     lastTelAt = now;

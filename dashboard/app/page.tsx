@@ -267,7 +267,7 @@ export default function HomePage() {
               icon={<Droplets size={16} strokeWidth={2.2} />}
             />
             <div className={styles.sideMeters}>
-              <BarMeter label="토양 수분 (raw)" value={data?.soil ?? null} color="#8b6b4a" />
+              <BarMeter label="토양 수분" value={data?.soil ?? null} color="#8b6b4a" />
               <BarMeter label="조도 CDS (raw)" value={data?.cds ?? null} color="#e0a100" />
             </div>
           </div>

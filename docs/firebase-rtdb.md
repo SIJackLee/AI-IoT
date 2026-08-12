@@ -29,7 +29,7 @@ ESP32  --HTTPS-->  Firebase RTDB  <--HTTPS--  PC 브라우저/Vercel
 {
   "t": 26.6,
   "h": 45,
-  "soil": 0,
+  "soil": 120,
   "cds": 485,
   "fan": 0,
   "rgb": { "r": 0, "g": 0, "b": 0 },
@@ -40,6 +40,7 @@ ESP32  --HTTPS-->  Firebase RTDB  <--HTTPS--  PC 브라우저/Vercel
 }
 ```
 
+- `soil`은 ADC raw가 아니라 **`4095 - raw`** (건조≈0, 습함↑)
 ### command 예
 
 ```json
@@ -53,10 +54,11 @@ ESP32  --HTTPS-->  Firebase RTDB  <--HTTPS--  PC 브라우저/Vercel
 | `off` | 수동 제어 |
 | `led` | RGB 빨→초→파→흰→끄기 (1.5초) |
 | `fan` | 팬 5초 ON / 5초 OFF |
-| `lcd` | LCD 문구 순환 (2초) |
-| `all` | LED+팬+LCD 동시 루프 |
+| `lcd` | (호환) LCD는 항상 센서값만 표시 |
+| `all` | LED+팬 동시 루프 |
 
-DEMO 활성 중에는 수동 fan/rgb/lcd는 무시됩니다. `전체 끄기`는 `demo:off` 포함.
+LCD 16×2는 **센서값 전용**입니다. (`Txx.xC Hxx%` / `Sxxxx Cxxxx Fx`)  
+대시보드에서 LCD 문구를 보낸 경우에만 임시 고정되며, 지우기 시 센서 화면으로 복귀합니다.
 ## Firebase 콘솔에서 할 일 (사용자)
 
 1. https://console.firebase.google.com/ 에서 프로젝트 생성  

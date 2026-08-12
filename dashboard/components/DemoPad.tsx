@@ -5,7 +5,7 @@ import styles from "./devices.module.css";
 
 export type DemoMode = "off" | "led" | "fan" | "lcd" | "all";
 
-const ORDER: DemoMode[] = ["off", "led", "fan", "lcd", "all"];
+const ORDER: DemoMode[] = ["off", "led", "fan", "all"];
 
 const META: Record<
   DemoMode,
@@ -14,8 +14,8 @@ const META: Record<
   off: { label: "OFF", hint: "수동 제어", Icon: Power },
   led: { label: "LED", hint: "색 순환 1.5초", Icon: Lightbulb },
   fan: { label: "FAN", hint: "5초 ON/OFF", Icon: Fan },
-  lcd: { label: "LCD", hint: "문구 순환 2초", Icon: Monitor },
-  all: { label: "ALL", hint: "전체 루프", Icon: Orbit },
+  lcd: { label: "LCD", hint: "센서값 고정", Icon: Monitor },
+  all: { label: "ALL", hint: "LED+팬 루프", Icon: Orbit },
 };
 
 type Props = {
