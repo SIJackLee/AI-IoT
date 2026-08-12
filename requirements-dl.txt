@@ -1,0 +1,7 @@
+# Deep learning — CPU wheels for home/company portability.
+# GPU (CUDA) torch is optional; see docs/환경세팅.md
+
+tensorflow>=2.15,<2.20
+torch>=2.2,<3
+torchvision>=0.17,<1
+torchaudio>=2.2,<3

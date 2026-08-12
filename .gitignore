@@ -19,7 +19,8 @@ credentials.json
 
 # IDE / OS
 .idea/
-.vscode/
+.vscode/*
+!.vscode/extensions.json
 *.swp
 .DS_Store
 Thumbs.db
@@ -28,8 +29,10 @@ desktop.ini
 # Jupyter
 .ipynb_checkpoints/
 
-# Arduino build
+# Arduino / PlatformIO build
 arduino/**/build/
+firmware/.pio/
+.pio/
 *.hex
 *.elf
 

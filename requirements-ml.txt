@@ -1,0 +1,6 @@
+# Machine learning extras (scikit-learn base is in requirements.txt)
+jupyter>=1.0,<2
+ipykernel>=6.29,<7
+seaborn>=0.13,<1
+joblib>=1.4,<2
+tqdm>=4.66,<5

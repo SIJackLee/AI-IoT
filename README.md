@@ -14,7 +14,8 @@
 |------|------|
 | `notes/` | 수업 필기, 사전평가·복습 정리 |
 | `python/` | Python·AI·데이터 실습 |
-| `arduino/` | Arduino 스케치 |
+| `firmware/` | PlatformIO 펌웨어 (Cursor) |
+| `arduino/` | Arduino 스케치 (보조) |
 | `mqtt/` | MQTT 예제·토픽 정리 |
 | `docs/` | 환경 세팅·과정 문서 |
 
@@ -36,6 +37,9 @@ python -m venv .venv
 # source .venv/bin/activate
 
 pip install -r requirements.txt
+pip install -r requirements-ml.txt
+pip install -r requirements-dl.txt
+pip install platformio
 ```
 
 4. 환경변수 파일 준비
@@ -47,10 +51,16 @@ copy .env.example .env   # Windows
 
 `.env`에는 실제 키·비밀번호만 넣고, **커밋하지 마세요.**
 
+5. Cursor에서 PlatformIO IDE 확장을 설치합니다 (Extensions 검색).  
+   상세는 [docs/환경세팅.md](docs/환경세팅.md) 참고.
+
 ## 검증
 
 ```bash
-python -c "import numpy, pandas, sklearn, paho.mqtt; print('ok')"
+python -c "import numpy, pandas, sklearn, paho.mqtt; print('base ok')"
+python -c "import tensorflow as tf, torch; print(tf.__version__, torch.__version__)"
+pio --version
+cd firmware && pio run -e uno
 ```
 
 ## 동기화
