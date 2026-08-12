@@ -1,0 +1,302 @@
+.habitat {
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  background:
+    radial-gradient(220px 120px at 20% 10%, rgba(59, 130, 196, 0.1), transparent 60%),
+    radial-gradient(200px 110px at 80% 20%, rgba(232, 161, 0, 0.1), transparent 55%),
+    linear-gradient(180deg, #ffffff, #eef6ef);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 1rem;
+  animation: sproutIn 0.75s var(--ease-spring) both;
+}
+
+.habitatSvg,
+.actuatorSvg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.pot {
+  fill: #d9e5d9;
+  stroke: var(--line-strong);
+  stroke-width: 1.2;
+}
+
+.water {
+  fill: color-mix(in srgb, var(--sky) 72%, white);
+  transition: y 0.7s var(--ease-spring), height 0.7s var(--ease-spring);
+}
+
+.waterRipple {
+  fill: color-mix(in srgb, var(--sky) 55%, white);
+  animation: rippleX 2.4s ease-in-out infinite;
+}
+
+.stem {
+  stroke: #2a5c3b;
+  stroke-width: 3.2;
+  stroke-linecap: round;
+}
+
+.leafOk {
+  fill: var(--leaf);
+}
+
+.leafWilt {
+  fill: var(--amber);
+}
+
+.leafSwingL {
+  animation: leafWiltL 1.8s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.leafSwingR {
+  animation: leafWiltR 1.8s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.shimmerIdle {
+  stroke: rgba(28, 56, 36, 0.12);
+}
+
+.shimmerHot {
+  stroke: var(--amber);
+  animation: shimmerPulse 1.35s ease-in-out infinite;
+}
+
+.fanHub,
+.fanDisk {
+  fill: #f7faf7;
+  stroke: var(--line-strong);
+  stroke-width: 1.2;
+}
+
+.fanBlade {
+  fill: var(--muted);
+}
+
+.fanBladeAlt {
+  fill: color-mix(in srgb, var(--muted) 70%, white);
+}
+
+.fanBladeOn {
+  fill: var(--accent);
+  opacity: 0.92;
+}
+
+.fanBladeOff {
+  fill: var(--muted);
+  opacity: 0.55;
+}
+
+.fanCore {
+  fill: var(--text);
+}
+
+.fanSpin {
+  animation: spinFan 0.7s linear infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.rgbOrb {
+  transition: fill 0.35s ease;
+}
+
+.rgb_off {
+  fill: rgba(148, 163, 184, 0.35);
+}
+
+.rgb_amber {
+  fill: var(--amber);
+}
+
+.rgb_red {
+  fill: var(--rose);
+}
+
+.rgb_white {
+  fill: #94a3b8;
+}
+
+.rgbPulse {
+  animation: orbPulse 1.35s ease-in-out infinite;
+}
+
+.rgbBloom {
+  fill: none;
+  stroke-width: 2;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: bloomScale 1.6s ease-out infinite;
+}
+
+.rgbStroke_amber {
+  stroke: var(--amber);
+}
+
+.rgbStroke_red {
+  stroke: var(--rose);
+}
+
+.rgbStroke_white {
+  stroke: #94a3b8;
+}
+
+.rgbStroke_off {
+  stroke: transparent;
+}
+
+.caption {
+  fill: var(--muted);
+  font-size: 10px;
+  font-family: var(--font-mono);
+}
+
+.actuator {
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, #ffffff, #f1f7f1);
+  padding: 0.65rem 0.7rem 0.35rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.actuatorHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 0 0.25rem 0.25rem;
+  font-size: 0.84rem;
+  font-weight: 740;
+}
+
+.actuatorHead em {
+  font-style: normal;
+  font-size: 0.72rem;
+  font-weight: 740;
+  color: var(--accent);
+}
+
+.ringTrack {
+  stroke: rgba(28, 56, 36, 0.1);
+}
+
+.ringValue {
+  transition: stroke-dasharray 0.6s var(--ease-spring);
+}
+
+.ringIdle {
+  stroke: var(--muted);
+  opacity: 0.55;
+}
+
+.ringAuto {
+  stroke: var(--accent);
+  animation: ringBreathe 2s ease-in-out infinite;
+}
+
+.ringAlert {
+  stroke: var(--rose);
+  animation: ringBreathe 0.9s ease-in-out infinite;
+}
+
+.modeLabel {
+  fill: var(--text);
+  font-size: 12px;
+  font-weight: 740;
+  font-family: var(--font-en);
+}
+
+.modeSub {
+  fill: var(--muted);
+  font-size: 9px;
+  font-family: var(--font-ko);
+}
+
+@keyframes spinFan {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes rippleX {
+  0%,
+  100% {
+    rx: 52;
+    opacity: 0.35;
+  }
+  50% {
+    rx: 60;
+    opacity: 0.55;
+  }
+}
+
+@keyframes shimmerPulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.95;
+  }
+}
+
+@keyframes leafWiltL {
+  0%,
+  100% {
+    transform: rotate(-48deg);
+  }
+  50% {
+    transform: rotate(-58deg);
+  }
+}
+
+@keyframes leafWiltR {
+  0%,
+  100% {
+    transform: rotate(48deg);
+  }
+  50% {
+    transform: rotate(58deg);
+  }
+}
+
+@keyframes orbPulse {
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes bloomScale {
+  0% {
+    transform: scale(0.75);
+    opacity: 0.55;
+  }
+  70% {
+    transform: scale(1.85);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(0.75);
+    opacity: 0;
+  }
+}
+
+@keyframes ringBreathe {
+  0%,
+  100% {
+    opacity: 0.75;
+  }
+  50% {
+    opacity: 1;
+  }
+}

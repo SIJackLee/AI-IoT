@@ -736,7 +736,93 @@
 
 .autoMeters {
   display: grid;
+  gap: 0.55rem;
+}
+
+.journeyMeter {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+}
+
+.journeyRight {
+  display: inline-flex;
+  align-items: center;
   gap: 0.45rem;
+}
+
+.journey_ok,
+.journey_warn,
+.journey_danger {
+  font-style: normal;
+  font-size: 0.62rem;
+  font-weight: 760;
+  letter-spacing: 0.04em;
+}
+
+.journey_ok {
+  color: var(--muted);
+}
+
+.journey_warn {
+  color: var(--amber);
+}
+
+.journey_danger {
+  color: var(--rose);
+}
+
+.journeyTrack {
+  position: relative;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.06);
+  overflow: visible;
+}
+
+.journeyTrack > i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  transition: width 0.55s var(--ease-spring);
+}
+
+.journeyPulse_warn {
+  animation: journeyPulse 1.4s ease-in-out infinite;
+}
+
+.journeyPulse_danger {
+  animation: journeyPulse 0.7s ease-in-out infinite;
+}
+
+.journeyMarkWarn,
+.journeyMarkHot {
+  position: absolute;
+  top: -3px;
+  width: 2px;
+  height: 16px;
+  border-radius: 2px;
+  transform: translateX(-50%);
+}
+
+.journeyMarkWarn {
+  background: var(--amber);
+}
+
+.journeyMarkHot {
+  background: var(--rose);
+}
+
+@keyframes journeyPulse {
+  0%,
+  100% {
+    opacity: 0.65;
+    filter: brightness(1);
+  }
+  50% {
+    opacity: 1;
+    filter: brightness(1.12);
+  }
 }
 
 .autoMeterHead {
@@ -748,7 +834,7 @@
 }
 
 .autoMeterHead b {
-  color: var(--ink);
+  color: var(--text);
   font-variant-numeric: tabular-nums;
 }
 

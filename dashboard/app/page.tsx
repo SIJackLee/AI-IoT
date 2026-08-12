@@ -18,6 +18,8 @@ import { BuzzerPad } from "@/components/BuzzerPad";
 import { LcdPanel } from "@/components/LcdPanel";
 import { DemoPad, type DemoMode } from "@/components/DemoPad";
 import { AutoPad, evalAutoRules, type ControlMode } from "@/components/AutoPad";
+import { HabitatScene, classifyRgb } from "@/components/motion/HabitatScene";
+import { ActuatorPhysics } from "@/components/motion/ActuatorPhysics";
 import styles from "./page.module.css";
 
 type Point = {
@@ -240,6 +242,7 @@ export default function HomePage() {
     g: data?.rgb?.g ?? 0,
     b: data?.rgb?.b ?? 0,
   };
+  const rgbKind = classifyRgb(rgb.r, rgb.g, rgb.b);
   const demoLock = demoMode !== "off";
   const autoLock = autoOn;
   const manualLock = demoLock || autoLock;
@@ -277,9 +280,16 @@ export default function HomePage() {
           <div className={styles.panelHead}>
             <div>
               <h2>생육 모니터링</h2>
-              <p className={styles.panelHint}>온·습도 추이와 토양·조도 센서</p>
+              <p className={styles.panelHint}>모션 서식지 · 온·습도 추이 · 토양·조도</p>
             </div>
           </div>
+
+          <HabitatScene
+            t={temp}
+            soil={data?.soil ?? null}
+            fan={fanOn}
+            rgb={rgbKind}
+          />
 
           <div className={styles.gaugeRow}>
             <RingGauge
@@ -369,6 +379,14 @@ export default function HomePage() {
           </div>
 
           <div className={styles.controlStack}>
+            <div className={styles.deviceCard}>
+              <ActuatorPhysics
+                mode={controlMode}
+                fan={fanOn}
+                rgb={rgbKind}
+                t={temp}
+              />
+            </div>
             <div className={styles.deviceCard}>
               <AutoPad
                 on={autoOn}

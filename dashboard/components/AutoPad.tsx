@@ -78,35 +78,62 @@ type Props = {
   onToggle: (next: boolean) => void;
 };
 
-function Meter({
+function JourneyMeter({
   label,
   value,
   max,
-  markers,
+  unit,
+  warn,
+  danger,
+  invert,
   color,
 }: {
   label: string;
   value: number | null;
   max: number;
-  markers: { at: number; tone: "warn" | "ok" | "hot" }[];
+  unit?: string;
+  warn: number;
+  danger: number;
+  invert?: boolean;
   color: string;
 }) {
   const pct = value === null ? 0 : Math.max(0, Math.min(100, (value / max) * 100));
+  const level =
+    value === null
+      ? "ok"
+      : invert
+        ? value <= danger
+          ? "danger"
+          : value <= warn
+            ? "warn"
+            : "ok"
+        : value >= danger
+          ? "danger"
+          : value >= warn
+            ? "warn"
+            : "ok";
+  const bar =
+    level === "danger" ? "#d1435b" : level === "warn" ? "#c9851a" : color;
+
   return (
-    <div className={styles.autoMeter}>
+    <div className={styles.journeyMeter}>
       <div className={styles.autoMeterHead}>
         <span>{label}</span>
-        <b>{value === null ? "—" : Math.round(value * 10) / 10}</b>
+        <span className={styles.journeyRight}>
+          <em className={styles[`journey_${level}`]}>{level.toUpperCase()}</em>
+          <b>
+            {value === null ? "—" : Math.round(value * 10) / 10}
+            {unit ?? ""}
+          </b>
+        </span>
       </div>
-      <div className={styles.autoMeterTrack}>
-        <i style={{ width: `${pct}%`, background: color }} />
-        {markers.map((m) => (
-          <em
-            key={`${m.at}-${m.tone}`}
-            className={styles[`autoMark_${m.tone}`]}
-            style={{ left: `${Math.max(0, Math.min(100, (m.at / max) * 100))}%` }}
-          />
-        ))}
+      <div className={styles.journeyTrack}>
+        <i
+          className={level !== "ok" ? styles[`journeyPulse_${level}`] : undefined}
+          style={{ width: `${pct}%`, background: bar }}
+        />
+        <em className={styles.journeyMarkWarn} style={{ left: `${(warn / max) * 100}%` }} />
+        <em className={styles.journeyMarkHot} style={{ left: `${(danger / max) * 100}%` }} />
       </div>
     </div>
   );
@@ -185,47 +212,42 @@ export function AutoPad({ on, mode, eval: ev, sensors, disabled, onToggle }: Pro
         </div>
 
         <div className={styles.autoMeters}>
-          <Meter
-            label="온도 °C"
+          <JourneyMeter
+            label="온도"
             value={sensors.t}
             max={50}
+            unit="°C"
+            warn={AUTO_THRESH.tOn}
+            danger={AUTO_THRESH.tHot}
             color="#1f7a4d"
-            markers={[
-              { at: AUTO_THRESH.tOff, tone: "ok" },
-              { at: AUTO_THRESH.tOn, tone: "warn" },
-              { at: AUTO_THRESH.tHot, tone: "hot" },
-            ]}
           />
-          <Meter
-            label="습도 %"
+          <JourneyMeter
+            label="습도"
             value={sensors.h}
             max={100}
+            unit="%"
+            warn={AUTO_THRESH.hOn}
+            danger={85}
             color="#3b82c4"
-            markers={[
-              { at: AUTO_THRESH.hOff, tone: "ok" },
-              { at: AUTO_THRESH.hOn, tone: "warn" },
-            ]}
           />
-          <Meter
-            label="토양 %"
+          <JourneyMeter
+            label="토양"
             value={sensors.soil}
             max={100}
+            unit="%"
+            warn={AUTO_THRESH.soilDry}
+            danger={AUTO_THRESH.soilCrit}
+            invert
             color="#8b6b4a"
-            markers={[
-              { at: AUTO_THRESH.soilCrit, tone: "hot" },
-              { at: AUTO_THRESH.soilDry, tone: "warn" },
-              { at: AUTO_THRESH.soilOk, tone: "ok" },
-            ]}
           />
-          <Meter
+          <JourneyMeter
             label="조도"
             value={sensors.cds}
             max={4095}
+            warn={AUTO_THRESH.cdsDark}
+            danger={200}
+            invert
             color="#e0a100"
-            markers={[
-              { at: AUTO_THRESH.cdsDark, tone: "warn" },
-              { at: AUTO_THRESH.cdsOk, tone: "ok" },
-            ]}
           />
         </div>
 
