@@ -52,12 +52,36 @@ bool demoNeedsKick = false;
 uint32_t lastCmdAt = 0;
 uint32_t lastTelAt = 0;
 uint32_t lastSensorLcdAt = 0;
+uint32_t lastAutoAt = 0;
 uint32_t lcdQuietUntil = 0;
 bool fanPwmReady = false;
+
+// 자동제어 (부저 제외)
+bool autoMode = false;
+bool autoFanLatched = false;
+bool autoSoilDry = false;
+bool autoCdsDim = false;
+bool autoAlert = false;
+uint32_t autoFanMinOnUntil = 0;
+bool keyWasDown = false;
 
 static const int FAN_PWM_CH = 0;
 static const uint32_t LCD_QUIET_FAN_MS = 450;
 static const uint32_t LCD_QUIET_RGB_MS = 220;
+static const uint32_t AUTO_PERIOD_MS = 3000;
+static const uint32_t AUTO_FAN_MIN_ON_MS = 5000;
+
+// 임계값 (히스테리시스)
+static const float AUTO_T_ON = 28.0f;
+static const float AUTO_T_OFF = 26.0f;
+static const float AUTO_H_ON = 70.0f;
+static const float AUTO_H_OFF = 60.0f;
+static const float AUTO_T_HOT = 30.0f;
+static const int AUTO_SOIL_DRY = 800;
+static const int AUTO_SOIL_OK = 1200;
+static const int AUTO_SOIL_CRIT = 600;
+static const int AUTO_CDS_DARK = 500;
+static const int AUTO_CDS_OK = 900;
 
 String basePath() {
   return String("https://") + FIREBASE_HOST + "/smartfarm/" + DEVICE_ID;
@@ -76,6 +100,13 @@ const char* demoName(DemoMode m) {
     case DEMO_ALL: return "all";
     default: return "off";
   }
+}
+
+const char* controlModeName() {
+  if (demoMode != DEMO_OFF) return "DEMO";
+  if (autoMode && autoAlert) return "ALERT";
+  if (autoMode) return "AUTO";
+  return "MANUAL";
 }
 
 DemoMode parseDemo(const String& body) {
@@ -256,11 +287,16 @@ void showSensorLcd() {
   int soil = readSoilScaled();
   int cds = analogRead(PIN_CDS);
 
+  char modeMark = ' ';
+  if (demoMode != DEMO_OFF) modeMark = 'D';
+  else if (autoMode && autoAlert) modeMark = '!';
+  else if (autoMode) modeMark = 'A';
+
   char l0[17], l1[17];
   if (!isnan(t) && !isnan(h) && t > -900) {
-    snprintf(l0, sizeof(l0), "T%4.1fC H%4.0f%% ", t, h);
+    snprintf(l0, sizeof(l0), "T%4.1fC H%4.0f%%%c", t, h, modeMark);
   } else {
-    snprintf(l0, sizeof(l0), "T----C H----%% ");
+    snprintf(l0, sizeof(l0), "T----C H----%%%c", modeMark);
   }
   snprintf(l1, sizeof(l1), "S%-4d C%-4d F%d", soil, cds, fanState);
 
@@ -276,6 +312,39 @@ void stopDemoOutputs() {
   demoFanOn = false;
 }
 
+void stopAutoOutputs() {
+  autoFanLatched = false;
+  autoSoilDry = false;
+  autoCdsDim = false;
+  autoAlert = false;
+  autoFanMinOnUntil = 0;
+  applyFan(0);
+  applyRgb(0, 0, 0);
+}
+
+void setAutoMode(bool on) {
+  if (on == autoMode) return;
+  autoMode = on;
+  if (on) {
+    // AUTO와 DEMO는 동시 불가
+    if (demoMode != DEMO_OFF) {
+      demoMode = DEMO_OFF;
+      demoNeedsKick = false;
+      stopDemoOutputs();
+    }
+    autoFanLatched = false;
+    autoSoilDry = false;
+    autoCdsDim = false;
+    autoAlert = false;
+    lastAutoAt = 0;
+    if (!lcdUserLock) showSensorLcd();
+  } else {
+    stopAutoOutputs();
+    if (!lcdUserLock) showSensorLcd();
+  }
+  Serial.printf("Auto => %s\n", autoMode ? "on" : "off");
+}
+
 void setDemoMode(DemoMode next) {
   if (next == demoMode) return;
   demoMode = next;
@@ -288,6 +357,15 @@ void setDemoMode(DemoMode next) {
     // 사용자 고정 문구가 없으면 즉시 센서 화면
     if (!lcdUserLock) showSensorLcd();
   } else {
+    // DEMO 진입 시 자동제어 일시 정지(플래그는 유지하지 않고 끔)
+    if (autoMode) {
+      autoMode = false;
+      autoFanLatched = false;
+      autoSoilDry = false;
+      autoCdsDim = false;
+      autoAlert = false;
+      autoFanMinOnUntil = 0;
+    }
     applyFan(0);
     applyRgb(0, 0, 0);
   }
@@ -383,16 +461,97 @@ void runDemo(uint32_t now) {
   }
 }
 
+// 자동제어: FAN/RGB/LCD만 (부저 호출 없음)
+void runAuto(uint32_t now) {
+  if (!autoMode || demoMode != DEMO_OFF || !actuatorsReady) return;
+  if (lastAutoAt != 0 && now - lastAutoAt < AUTO_PERIOD_MS) return;
+  lastAutoAt = now;
+
+  TempAndHumidity th = dht.getTempAndHumidity();
+  float t = th.temperature;
+  float h = th.humidity;
+  int soil = readSoilScaled();
+  int cds = analogRead(PIN_CDS);
+
+  const bool tOk = !isnan(t) && t > -900;
+  const bool hOk = !isnan(h) && h > -900;
+
+  // R1/R2 팬 + 히스테리시스
+  if (tOk && t >= AUTO_T_ON) autoFanLatched = true;
+  if (hOk && h >= AUTO_H_ON) autoFanLatched = true;
+  {
+    bool cool = !tOk || t <= AUTO_T_OFF;
+    bool dryAir = !hOk || h <= AUTO_H_OFF;
+    if (cool && dryAir && now >= autoFanMinOnUntil) autoFanLatched = false;
+  }
+
+  // R3 soil / R4 cds 래치
+  if (soil <= AUTO_SOIL_DRY) autoSoilDry = true;
+  if (soil >= AUTO_SOIL_OK) autoSoilDry = false;
+  if (cds <= AUTO_CDS_DARK) autoCdsDim = true;
+  if (cds >= AUTO_CDS_OK) autoCdsDim = false;
+
+  // RGB 우선순위: R5 > R3 > R4 (부저 없음)
+  int wantR = 0, wantG = 0, wantB = 0;
+  bool wantAlert = false;
+  bool forceFan = false;
+
+  if (tOk && t >= AUTO_T_HOT && soil <= AUTO_SOIL_CRIT) {
+    wantR = 255;
+    wantG = 0;
+    wantB = 0;
+    forceFan = true;
+    wantAlert = true;
+  } else if (autoSoilDry) {
+    wantR = 255;
+    wantG = 120;
+    wantB = 0;
+    wantAlert = true;
+  } else if (autoCdsDim) {
+    wantR = 80;
+    wantG = 80;
+    wantB = 80;
+  }
+
+  autoAlert = wantAlert;
+  bool wantFan = autoFanLatched || forceFan;
+  if (wantFan && !fanState) {
+    autoFanMinOnUntil = now + AUTO_FAN_MIN_ON_MS;
+  }
+
+  applyFan(wantFan ? 1 : 0);
+  applyRgb(wantR, wantG, wantB);
+}
+
+void handleKeyToggle() {
+  // active-low: pressed == 0
+  bool down = digitalRead(PIN_KEY) == 0;
+  if (down && !keyWasDown) {
+    // 짧게: AUTO ↔ MANUAL (DEMO 중이면 DEMO 해제 후 AUTO ON)
+    if (demoMode != DEMO_OFF) {
+      setDemoMode(DEMO_OFF);
+      setAutoMode(true);
+    } else {
+      setAutoMode(!autoMode);
+    }
+  }
+  keyWasDown = down;
+}
+
 void handleCommand(const String& body) {
   if (body.length() == 0 || body == "null") return;
+
+  if (body.indexOf("\"auto\"") >= 0) {
+    setAutoMode(extractInt(body, "auto", autoMode ? 1 : 0) != 0);
+  }
 
   DemoMode next = parseDemo(body);
   if (body.indexOf("\"demo\"") >= 0) {
     setDemoMode(next);
   }
 
-  // DEMO 활성 중에는 수동 fan/rgb/lcd 무시 (buzzer는 허용)
-  const bool locked = (demoMode != DEMO_OFF);
+  // DEMO 또는 AUTO 활성 중에는 수동 fan/rgb/lcd 무시 (buzzer는 허용)
+  const bool locked = (demoMode != DEMO_OFF) || autoMode;
 
   if (!locked && body.indexOf("\"fan\"") >= 0) {
     applyFan(extractInt(body, "fan", fanState));
@@ -440,16 +599,19 @@ void publishTelemetry() {
   int cds = analogRead(PIN_CDS);
   int key = digitalRead(PIN_KEY);
 
-  char buf[420];
+  char buf[480];
   snprintf(buf, sizeof(buf),
            "{\"t\":%.1f,\"h\":%.1f,\"soil\":%d,\"cds\":%d,"
            "\"fan\":%d,\"rgb\":{\"r\":%d,\"g\":%d,\"b\":%d},"
-           "\"buzzer\":%d,\"key\":%d,\"demo\":\"%s\",\"lcdCustom\":%s,"
+           "\"buzzer\":%d,\"key\":%d,\"demo\":\"%s\",\"auto\":%d,"
+           "\"mode\":\"%s\",\"lcdCustom\":%s,"
            "\"ip\":\"%s\",\"rssi\":%d,\"ts\":%lu}",
            t, h, soil, cds,
            fanState, rgbR, rgbG, rgbB,
            buzzerState, key,
            demoName(demoMode),
+           autoMode ? 1 : 0,
+           controlModeName(),
            lcdUserLock ? "true" : "false",
            WiFi.localIP().toString().c_str(),
            WiFi.RSSI(),
@@ -523,6 +685,7 @@ void loop() {
   if (WiFi.status() != WL_CONNECTED) {
     forceFanOff();
     setDemoMode(DEMO_OFF);
+    setAutoMode(false);
     actuatorsReady = false;
     actuatorsReadyAt = millis() + 2500;
     wifiConnect();
@@ -530,7 +693,9 @@ void loop() {
     return;
   }
 
-  // Firebase poll ~3s (non-blocking demo continues between polls)
+  handleKeyToggle();
+
+  // Firebase poll ~3s (non-blocking demo/auto continues between polls)
   if (now - lastCmdAt >= 3000) {
     lastCmdAt = now;
     String cmd = firebaseGet("/command");
@@ -538,6 +703,7 @@ void loop() {
   }
 
   runDemo(millis());
+  runAuto(millis());
 
   if (now - lastSensorLcdAt >= 1500) {
     lastSensorLcdAt = now;

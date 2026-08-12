@@ -557,3 +557,343 @@
     transform: scale(1);
   }
 }
+
+/* —— Auto control —— */
+.autoRoot {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  position: relative;
+}
+
+.autoRootOn .autoToggle {
+  border-color: rgba(31, 122, 77, 0.35);
+}
+
+.autoRootAlert .autoToggle {
+  border-color: rgba(239, 68, 68, 0.45);
+  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.12), 0 12px 28px rgba(239, 68, 68, 0.1);
+  animation: autoAlertPulse 1.8s ease-in-out infinite;
+}
+
+.autoToggle {
+  position: relative;
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.85rem;
+  align-items: center;
+  text-align: left;
+  padding: 0.95rem 1rem;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background:
+    radial-gradient(140px 80px at 12% 20%, rgba(59, 130, 196, 0.12), transparent 70%),
+    linear-gradient(180deg, #ffffff, #f3f7f4);
+  cursor: pointer;
+  transition:
+    transform 0.18s var(--ease-spring),
+    border-color 0.2s ease,
+    box-shadow 0.25s ease;
+}
+
+.autoToggle:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+.autoToggle:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.autoToggleOn {
+  background:
+    radial-gradient(160px 90px at 18% 0%, rgba(31, 122, 77, 0.18), transparent 65%),
+    linear-gradient(180deg, #f4fbf6, #e7f4eb);
+}
+
+.autoOrb {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  color: var(--accent);
+  background: linear-gradient(145deg, rgba(31, 122, 77, 0.14), rgba(59, 130, 196, 0.1));
+  border: 1px solid rgba(31, 122, 77, 0.18);
+}
+
+.autoToggleOn .autoOrb {
+  animation: autoOrbFloat 2.8s ease-in-out infinite;
+  color: #14663d;
+}
+
+.autoRootAlert .autoOrb {
+  color: #dc2626;
+  background: linear-gradient(145deg, rgba(239, 68, 68, 0.16), rgba(245, 158, 11, 0.12));
+  border-color: rgba(239, 68, 68, 0.28);
+}
+
+.autoCopy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.autoCopy strong {
+  font-size: 0.98rem;
+  font-weight: 760;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+}
+
+.autoCopy span {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.autoCopy small {
+  font-size: 0.68rem;
+  color: var(--muted);
+  opacity: 0.85;
+}
+
+.autoSwitch {
+  width: 46px;
+  height: 28px;
+  border-radius: 999px;
+  background: #d7e0d8;
+  border: 1px solid var(--line);
+  position: relative;
+  flex-shrink: 0;
+  transition: background 0.25s ease;
+}
+
+.autoSwitch i {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.15);
+  transition: transform 0.28s var(--ease-spring);
+}
+
+.autoSwitchOn {
+  background: linear-gradient(90deg, #1f7a4d, #3b82c4);
+  border-color: transparent;
+}
+
+.autoSwitchOn i {
+  transform: translateX(18px);
+}
+
+.autoViz {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  animation: riseSoft 0.55s var(--ease-spring) both;
+}
+
+.autoOutcome {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.autoChip {
+  --chip: #94a3b8;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--muted);
+  background: rgba(148, 163, 184, 0.12);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+}
+
+.autoChipHot {
+  color: #14663d;
+  background: rgba(31, 122, 77, 0.12);
+  border-color: rgba(31, 122, 77, 0.28);
+  animation: chipGlow 1.6s ease-in-out infinite;
+}
+
+.autoChipLit {
+  color: color-mix(in srgb, var(--chip) 80%, #0f172a);
+  background: color-mix(in srgb, var(--chip) 18%, white);
+  border-color: color-mix(in srgb, var(--chip) 40%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--chip) 20%, transparent);
+}
+
+.autoMeters {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.autoMeterHead {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-bottom: 0.22rem;
+}
+
+.autoMeterHead b {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.autoMeterTrack {
+  position: relative;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.06);
+  overflow: visible;
+}
+
+.autoMeterTrack > i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  transition: width 0.55s var(--ease-spring);
+}
+
+.autoMark_ok,
+.autoMark_warn,
+.autoMark_hot {
+  position: absolute;
+  top: -3px;
+  width: 2px;
+  height: 14px;
+  border-radius: 2px;
+  transform: translateX(-50%);
+  opacity: 0.9;
+}
+
+.autoMark_ok {
+  background: #22c55e;
+}
+
+.autoMark_warn {
+  background: #f59e0b;
+}
+
+.autoMark_hot {
+  background: #ef4444;
+}
+
+.autoRules {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.autoRule {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.55rem;
+  align-items: center;
+  padding: 0.45rem 0.55rem;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  background: rgba(15, 23, 42, 0.025);
+  color: var(--muted);
+  transition:
+    background 0.25s ease,
+    border-color 0.25s ease,
+    color 0.25s ease,
+    transform 0.2s ease;
+}
+
+.autoRule strong {
+  display: block;
+  font-size: 0.76rem;
+  font-weight: 740;
+  color: inherit;
+}
+
+.autoRule span {
+  font-size: 0.66rem;
+  opacity: 0.85;
+}
+
+.autoRule em {
+  font-style: normal;
+  font-size: 0.66rem;
+  font-weight: 760;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.autoRuleOn {
+  color: #14663d;
+  background: rgba(31, 122, 77, 0.1);
+  border-color: rgba(31, 122, 77, 0.22);
+  transform: translateX(2px);
+}
+
+.autoRuleDanger {
+  color: #b91c1c;
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.28);
+  animation: autoRuleFlash 1.4s ease-in-out infinite;
+}
+
+@keyframes autoOrbFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes autoAlertPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.12), 0 12px 28px rgba(239, 68, 68, 0.08);
+  }
+  50% {
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.16), 0 16px 34px rgba(239, 68, 68, 0.16);
+  }
+}
+
+@keyframes chipGlow {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.08);
+  }
+}
+
+@keyframes autoRuleFlash {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.82;
+  }
+}
+
+@keyframes riseSoft {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

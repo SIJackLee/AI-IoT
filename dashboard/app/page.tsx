@@ -17,6 +17,7 @@ import { RgbPad } from "@/components/RgbPad";
 import { BuzzerPad } from "@/components/BuzzerPad";
 import { LcdPanel } from "@/components/LcdPanel";
 import { DemoPad, type DemoMode } from "@/components/DemoPad";
+import { AutoPad, evalAutoRules, type ControlMode } from "@/components/AutoPad";
 import styles from "./page.module.css";
 
 type Point = {
@@ -121,6 +122,16 @@ function normalizeDemo(v: string | undefined): DemoMode {
   return "off";
 }
 
+function normalizeMode(v: string | undefined, autoOn: boolean, demo: DemoMode, alertHint: boolean): ControlMode {
+  if (demo !== "off") return "DEMO";
+  if (v === "ALERT" || v === "AUTO" || v === "MANUAL" || v === "DEMO") {
+    if (v === "DEMO" && demo === "off") return autoOn ? (alertHint ? "ALERT" : "AUTO") : "MANUAL";
+    return v;
+  }
+  if (autoOn) return alertHint ? "ALERT" : "AUTO";
+  return "MANUAL";
+}
+
 export default function HomePage() {
   const [data, setData] = useState<Telemetry | null>(null);
   const [history, setHistory] = useState<Point[]>([]);
@@ -163,6 +174,22 @@ export default function HomePage() {
     return () => clearInterval(id);
   }, [refresh]);
 
+  const autoOn = Boolean(data?.auto);
+  const demoMode = normalizeDemo(data?.demo);
+  const temp = valid(data?.t);
+  const hum = valid(data?.h);
+  const sensors = useMemo(
+    () => ({
+      t: temp,
+      h: hum,
+      soil: data?.soil ?? null,
+      cds: data?.cds ?? null,
+    }),
+    [temp, hum, data?.soil, data?.cds],
+  );
+  const autoEval = useMemo(() => evalAutoRules(sensors), [sensors]);
+  const controlMode = normalizeMode(data?.mode, autoOn, demoMode, autoEval.alert);
+
   const baseCommand = useMemo<Command>(
     () => ({
       fan: data?.fan ?? 0,
@@ -172,9 +199,10 @@ export default function HomePage() {
         g: data?.rgb?.g ?? 0,
         b: data?.rgb?.b ?? 0,
       },
-      demo: normalizeDemo(data?.demo),
+      demo: demoMode,
+      auto: autoOn ? 1 : 0,
     }),
-    [data],
+    [data, demoMode, autoOn],
   );
 
   async function send(partial: Command) {
@@ -212,11 +240,10 @@ export default function HomePage() {
     g: data?.rgb?.g ?? 0,
     b: data?.rgb?.b ?? 0,
   };
-  const demoMode = normalizeDemo(data?.demo);
   const demoLock = demoMode !== "off";
+  const autoLock = autoOn;
+  const manualLock = demoLock || autoLock;
   const keyPressed = data?.key === 0;
-  const temp = valid(data?.t);
-  const hum = valid(data?.h);
 
   return (
     <main className={styles.shell}>
@@ -224,17 +251,22 @@ export default function HomePage() {
         <div className={styles.brandBlock}>
           <p className={styles.eyebrow}>Camtic · Agri Motion</p>
           <h1 className={styles.brand}>AI-IoT 스마트팜</h1>
-          <p className={styles.tagline}>생육 환경 모니터링 · 장치 원격 제어</p>
+          <p className={styles.tagline}>생육 환경 모니터링 · 자동·원격 제어</p>
         </div>
         <div className={styles.heroAside}>
-          <span className={styles.livePill}>
+          <span
+            className={`${styles.livePill} ${
+              controlMode === "ALERT" ? styles.modeAlert : controlMode === "AUTO" ? styles.modeAuto : ""
+            }`}
+          >
             <i className={`${styles.liveDot} ${online ? "" : styles.bad}`} />
-            {online ? "실시간 연결" : "오프라인"}
+            {online ? controlMode : "오프라인"}
           </span>
           <p className={styles.meta}>
             {data?.ip ? `ESP ${data.ip}` : "ESP —"} · RSSI {fmt(data?.rssi)} dBm · 키{" "}
             {keyPressed ? "눌림" : "대기"}
             {demoLock ? ` · DEMO ${demoMode.toUpperCase()}` : ""}
+            {autoLock && !demoLock ? " · AUTO" : ""}
           </p>
         </div>
         {error ? <p className={styles.error}>{error}</p> : null}
@@ -332,29 +364,51 @@ export default function HomePage() {
           <div className={styles.panelHead}>
             <div>
               <h2>장치 제어</h2>
-              <p className={styles.panelHint}>현장 액추에이터를 바로 조작</p>
+              <p className={styles.panelHint}>자동규칙 · DEMO · 수동 액추에이터</p>
             </div>
           </div>
 
           <div className={styles.controlStack}>
             <div className={styles.deviceCard}>
+              <AutoPad
+                on={autoOn}
+                mode={controlMode}
+                eval={autoEval}
+                sensors={sensors}
+                disabled={busy}
+                onToggle={(next) =>
+                  send(
+                    next
+                      ? { auto: 1, demo: "off" }
+                      : { auto: 0 },
+                  )
+                }
+              />
+            </div>
+            <div className={styles.deviceCard}>
               <DemoPad
                 mode={demoMode}
                 disabled={busy}
-                onChange={(next) => send({ demo: next })}
+                onChange={(next) =>
+                  send(
+                    next === "off"
+                      ? { demo: "off" }
+                      : { demo: next, auto: 0 },
+                  )
+                }
               />
             </div>
             <div className={styles.deviceCard}>
               <FanControl
                 on={fanOn}
-                disabled={busy || demoLock}
+                disabled={busy || manualLock}
                 onToggle={(next) => send({ fan: next ? 1 : 0 })}
               />
             </div>
             <div className={styles.deviceCard}>
               <RgbPad
                 value={rgb}
-                disabled={busy || demoLock}
+                disabled={busy || manualLock}
                 onChange={(next) => send({ rgb: next })}
               />
             </div>
@@ -365,7 +419,7 @@ export default function HomePage() {
               <LcdPanel
                 value={lcd}
                 preview={lcdPreview}
-                disabled={busy || demoLock}
+                disabled={busy || manualLock}
                 onChange={setLcd}
                 onSend={() => send({ lcd: lcd.trim() })}
                 onClear={() => {
@@ -381,6 +435,7 @@ export default function HomePage() {
                 disabled={busy}
                 onClick={() =>
                   send({
+                    auto: 0,
                     demo: "off",
                     fan: 0,
                     buzzer: 0,

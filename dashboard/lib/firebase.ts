@@ -8,6 +8,8 @@ export type Telemetry = {
   key?: number;
   rgb?: { r?: number; g?: number; b?: number };
   demo?: string;
+  auto?: number;
+  mode?: string;
   ip?: string;
   rssi?: number;
   ts?: number;
@@ -21,6 +23,7 @@ export type Command = {
   rgb?: { r: number; g: number; b: number };
   lcd?: string;
   demo?: DemoMode;
+  auto?: number;
 };
 
 function dbRoot() {

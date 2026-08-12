@@ -36,28 +36,35 @@ ESP32  --HTTPS-->  Firebase RTDB  <--HTTPS--  PC 브라우저/Vercel
   "buzzer": 0,
   "key": 1,
   "demo": "off",
+  "auto": 0,
+  "mode": "MANUAL",
   "ts": 1710000000
 }
 ```
 
 - `soil`은 ADC raw가 아니라 **`4095 - raw`** (건조≈0, 습함↑)
+- `auto` / `mode` 설명은 [`docs/auto-control.md`](./auto-control.md) 참고
+
 ### command 예
 
 ```json
-{ "fan": 1, "rgb": { "r": 255, "g": 0, "b": 0 }, "buzzer": 0, "lcd": "Hello", "demo": "off" }
+{ "fan": 1, "rgb": { "r": 255, "g": 0, "b": 0 }, "buzzer": 0, "lcd": "Hello", "demo": "off", "auto": 0 }
 ```
 
 ### demo 모드
 
 | 값 | 동작 |
 |----|------|
-| `off` | 수동 제어 |
+| `off` | 수동 또는 AUTO |
 | `led` | RGB 빨→초→파→흰→끄기 (1.5초) |
 | `fan` | 팬 5초 ON / 5초 OFF |
 | `lcd` | (호환) LCD는 항상 센서값만 표시 |
 | `all` | LED+팬 동시 루프 |
 
-LCD 16×2는 **센서값 전용**입니다. (`Txx.xC Hxx%` / `Sxxxx Cxxxx Fx`)  
+DEMO와 AUTO는 동시에 켤 수 없습니다. AUTO 중 수동 fan/RGB/LCD는 무시됩니다.
+
+LCD 16×2는 **센서값 전용**입니다. (`Txx.xC Hxx%A` / `Sxxxx Cxxxx Fx`)  
+끝 문자: `A`=AUTO, `!`=ALERT, `D`=DEMO.  
 대시보드에서 LCD 문구를 보낸 경우에만 임시 고정되며, 지우기 시 센서 화면으로 복귀합니다.
 ## Firebase 콘솔에서 할 일 (사용자)
 

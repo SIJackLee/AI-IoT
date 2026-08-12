@@ -82,6 +82,34 @@
   color: var(--muted);
   font-size: 0.84rem;
   font-weight: 700;
+  transition:
+    border-color 0.25s ease,
+    background 0.25s ease,
+    color 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.modeAuto {
+  color: #14663d;
+  border-color: rgba(31, 122, 77, 0.35);
+  background: rgba(232, 246, 237, 0.95);
+}
+
+.modeAlert {
+  color: #b91c1c;
+  border-color: rgba(239, 68, 68, 0.4);
+  background: rgba(254, 242, 242, 0.96);
+  animation: modeAlertGlow 1.6s ease-in-out infinite;
+}
+
+@keyframes modeAlertGlow {
+  0%,
+  100% {
+    box-shadow: var(--shadow-sm);
+  }
+  50% {
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.14), var(--shadow-sm);
+  }
 }
 
 .liveDot {
