@@ -25,7 +25,8 @@ export function FanControl({ on, disabled, onToggle }: Props) {
         onClick={() => onToggle(!on)}
       >
         <span className={styles.fanHalo} />
-        <Fan className={`${styles.fanIcon} ${on ? styles.spin : ""}`} strokeWidth={1.75} />
+        <span className={styles.fanHalo2} />
+        <Fan className={`${styles.fanIcon} ${on ? styles.spin : ""}`} strokeWidth={1.7} />
       </button>
     </div>
   );

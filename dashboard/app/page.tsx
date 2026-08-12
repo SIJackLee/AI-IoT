@@ -71,6 +71,7 @@ function RingGauge({
           className={styles.ringValue}
           style={{
             stroke: color,
+            color,
             strokeDasharray: `${dash} ${c}`,
           }}
         />
@@ -292,8 +293,11 @@ export default function HomePage() {
                   name="온도 °C"
                   stroke="#0d9488"
                   fill="url(#gTemp)"
-                  strokeWidth={2.4}
+                  strokeWidth={2.6}
                   isAnimationActive
+                  animationDuration={700}
+                  dot={false}
+                  activeDot={{ r: 4 }}
                 />
                 <Area
                   type="monotone"
@@ -301,8 +305,11 @@ export default function HomePage() {
                   name="습도 %"
                   stroke="#2563eb"
                   fill="url(#gHum)"
-                  strokeWidth={2}
+                  strokeWidth={2.2}
                   isAnimationActive
+                  animationDuration={700}
+                  dot={false}
+                  activeDot={{ r: 4 }}
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -318,40 +325,50 @@ export default function HomePage() {
           </div>
 
           <div className={styles.controlStack}>
-            <FanControl
-              on={fanOn}
-              disabled={busy}
-              onToggle={(next) => send({ fan: next ? 1 : 0 })}
-            />
-            <RgbPad value={rgb} disabled={busy} onChange={(next) => send({ rgb: next })} />
-            <BuzzerPad disabled={busy} onBeep={beepOnce} />
-            <LcdPanel
-              value={lcd}
-              preview={lcdPreview}
-              disabled={busy}
-              onChange={setLcd}
-              onSend={() => send({ lcd: lcd.trim() })}
-              onClear={() => {
-                setLcd("");
-                send({ lcd: "" });
-              }}
-            />
-            <button
-              type="button"
-              className={styles.safetyBtn}
-              disabled={busy}
-              onClick={() =>
-                send({
-                  fan: 0,
-                  buzzer: 0,
-                  rgb: { r: 0, g: 0, b: 0 },
-                  lcd: "",
-                })
-              }
-            >
-              <Power size={18} strokeWidth={2} />
-              전체 끄기
-            </button>
+            <div className={styles.deviceCard}>
+              <FanControl
+                on={fanOn}
+                disabled={busy}
+                onToggle={(next) => send({ fan: next ? 1 : 0 })}
+              />
+            </div>
+            <div className={styles.deviceCard}>
+              <RgbPad value={rgb} disabled={busy} onChange={(next) => send({ rgb: next })} />
+            </div>
+            <div className={styles.deviceCard}>
+              <BuzzerPad disabled={busy} onBeep={beepOnce} />
+            </div>
+            <div className={styles.deviceCard}>
+              <LcdPanel
+                value={lcd}
+                preview={lcdPreview}
+                disabled={busy}
+                onChange={setLcd}
+                onSend={() => send({ lcd: lcd.trim() })}
+                onClear={() => {
+                  setLcd("");
+                  send({ lcd: "" });
+                }}
+              />
+            </div>
+            <div className={styles.deviceCard}>
+              <button
+                type="button"
+                className={styles.safetyBtn}
+                disabled={busy}
+                onClick={() =>
+                  send({
+                    fan: 0,
+                    buzzer: 0,
+                    rgb: { r: 0, g: 0, b: 0 },
+                    lcd: "",
+                  })
+                }
+              >
+                <Power size={18} strokeWidth={2} />
+                전체 끄기
+              </button>
+            </div>
           </div>
         </section>
       </div>
