@@ -56,6 +56,14 @@ uint32_t lastTelAt = 0;
 uint32_t lastSensorLcdAt = 0;
 uint32_t lastAutoAt = 0;
 uint32_t lcdQuietUntil = 0;
+uint32_t lastLcdRecoverAt = 0;
+uint32_t lastActuatorAt = 0;
+
+// 액추에이터 스태거 큐 (FAN/RGB 동시 급변 완화)
+bool pendingFan = false;
+int pendingFanVal = 0;
+bool pendingRgb = false;
+int pendingRgbR = 0, pendingRgbG = 0, pendingRgbB = 0;
 
 // 자동제어 (부저 제외)
 bool autoMode = false;
@@ -76,14 +84,20 @@ static const uint32_t WIFI_DOWN_REBOOT_MS = 120000;
 static const int WDT_TIMEOUT_S = 12;
 bool wdtReady = false;
 
+static const uint32_t HTTP_TIMEOUT_MS = 5000;
+static const uint32_t ACTUATOR_STAGGER_MS = 120;
+static const uint32_t LCD_QUIET_FAN_MS = 900;
+static const uint32_t LCD_QUIET_RGB_MS = 450;
+static const uint32_t LCD_QUIET_BOTH_MS = 1100;
+static const uint32_t LCD_QUIET_RECOVER_MS = 400;
+static const uint32_t LCD_RECOVER_COOLDOWN_MS = 8000;
+
 // Phase C: 부트 원인·리부팅 누적 (RTC — 전원 OFF면 초기화)
 static const uint32_t REBOOT_MAGIC = 0xA10C00B1u;
 RTC_DATA_ATTR uint32_t rebootMagic = 0;
 RTC_DATA_ATTR uint32_t rebootN = 0;
 esp_reset_reason_t lastResetReason = ESP_RST_UNKNOWN;
 
-static const uint32_t LCD_QUIET_FAN_MS = 450;
-static const uint32_t LCD_QUIET_RGB_MS = 220;
 static const uint32_t AUTO_PERIOD_MS = 3000;
 static const uint32_t AUTO_FAN_MIN_ON_MS = 5000;
 
@@ -98,6 +112,13 @@ static const int AUTO_SOIL_OK = 40;
 static const int AUTO_SOIL_CRIT = 20;
 static const int AUTO_CDS_DARK = 500;
 static const int AUTO_CDS_OK = 900;
+
+void noteLcdQuiet(uint32_t ms);
+bool lcdIsQuiet();
+void renderLcd(bool force = false);
+void recoverLcdI2c(const char* why);
+void wdtFeed();
+void serviceActuators();
 
 String basePath() {
   return String("https://") + FIREBASE_HOST + "/smartfarm/" + DEVICE_ID;
@@ -178,6 +199,25 @@ bool lcdIsQuiet() {
   return millis() < lcdQuietUntil;
 }
 
+void recoverLcdI2c(const char* why) {
+  uint32_t now = millis();
+  if (now - lastLcdRecoverAt < LCD_RECOVER_COOLDOWN_MS) return;
+  lastLcdRecoverAt = now;
+  Serial.printf("LCD I2C recover: %s\n", why ? why : "");
+  wdtFeed();
+  Wire.end();
+  delay(8);
+  wdtFeed();
+  Wire.begin(PIN_SDA, PIN_SCL);
+  lcd.init();
+  lcd.backlight();
+  lcdShown0 = "";
+  lcdShown1 = "";
+  renderLcd(true);
+  noteLcdQuiet(LCD_QUIET_RECOVER_MS);
+  wdtFeed();
+}
+
 void wdtFeed() {
   if (wdtReady) {
     esp_task_wdt_reset();
@@ -195,6 +235,7 @@ void wdtBegin() {
 }
 
 void forceFanOff() {
+  pendingFan = false;
   pinMode(PIN_FAN, OUTPUT);
   digitalWrite(PIN_FAN, LOW);
   fanState = 0;
@@ -207,8 +248,8 @@ void buzzerOff() {
   buzzerState = 0;
 }
 
-// 환기팬: GPIO2 Digital ON/OFF (PWM 아님)
-void applyFan(int on) {
+// 즉시 팬 적용 (스태거 우회 — 안전 경로)
+void applyFanImmediate(int on) {
   if (!actuatorsReady) {
     forceFanOff();
     return;
@@ -218,19 +259,20 @@ void applyFan(int on) {
   if (next == fanState) return;
 
   noteLcdQuiet(LCD_QUIET_FAN_MS);
+  if (pendingRgb) noteLcdQuiet(LCD_QUIET_BOTH_MS);
   pinMode(PIN_FAN, OUTPUT);
   digitalWrite(PIN_FAN, next ? HIGH : LOW);
   fanState = next;
 }
 
-void applyRgb(int r, int g, int b) {
+void applyRgbImmediate(int r, int g, int b) {
   int nr = constrain(r, 0, 255);
   int ng = constrain(g, 0, 255);
   int nb = constrain(b, 0, 255);
   if (nr == rgbR && ng == rgbG && nb == rgbB) return;
 
   noteLcdQuiet(LCD_QUIET_RGB_MS);
-  // 채널을 살짝 시프트해 동시 전류 피크 완화
+  if (pendingFan) noteLcdQuiet(LCD_QUIET_BOTH_MS);
   if (nr != rgbR) {
     rgbR = nr;
     digitalWrite(PIN_RGB_R, rgbR > 0 ? LOW : HIGH);
@@ -244,6 +286,57 @@ void applyRgb(int r, int g, int b) {
   if (nb != rgbB) {
     rgbB = nb;
     digitalWrite(PIN_RGB_B, rgbB > 0 ? LOW : HIGH);
+  }
+}
+
+// 환기팬: 큐잉 후 serviceActuators에서 스태거 적용
+void applyFan(int on) {
+  if (!actuatorsReady) {
+    forceFanOff();
+    return;
+  }
+  pendingFanVal = on ? 1 : 0;
+  pendingFan = true;
+}
+
+void applyRgb(int r, int g, int b) {
+  int nr = constrain(r, 0, 255);
+  int ng = constrain(g, 0, 255);
+  int nb = constrain(b, 0, 255);
+  if (!actuatorsReady) {
+    applyRgbImmediate(nr, ng, nb);
+    pendingRgb = false;
+    return;
+  }
+  if (nr == rgbR && ng == rgbG && nb == rgbB && !pendingRgb) return;
+  pendingRgbR = nr;
+  pendingRgbG = ng;
+  pendingRgbB = nb;
+  pendingRgb = true;
+}
+
+void serviceActuators() {
+  if (!actuatorsReady) return;
+  uint32_t now = millis();
+  if (now - lastActuatorAt < ACTUATOR_STAGGER_MS) return;
+
+  // RGB 먼저 → FAN (전류 피크 분산)
+  if (pendingRgb) {
+    applyRgbImmediate(pendingRgbR, pendingRgbG, pendingRgbB);
+    pendingRgb = false;
+    lastActuatorAt = now;
+    return;
+  }
+  if (pendingFan) {
+    const bool turningOn = pendingFanVal != 0 && fanState == 0;
+    applyFanImmediate(pendingFanVal);
+    pendingFan = false;
+    lastActuatorAt = now;
+    if (turningOn) {
+      delay(15);
+      wdtFeed();
+      recoverLcdI2c("fan_on");
+    }
   }
 }
 
@@ -263,7 +356,8 @@ String pad16(String s) {
 }
 
 // clear() 없이 덮어쓰기 — 백라이트 깜빡임·I2C 부하 감소
-void renderLcd(bool force = false) {
+void renderLcd(bool force) {
+  if (!force && lcdIsQuiet()) return;
   String a = pad16(lcdLine0);
   String b = pad16(lcdLine1);
   if (!force && a == lcdShown0 && b == lcdShown1) return;
@@ -410,7 +504,8 @@ void setDemoMode(DemoMode next) {
 
 void safeShutdown(const char* why) {
   forceFanOff();
-  applyRgb(0, 0, 0);
+  pendingRgb = false;
+  applyRgbImmediate(0, 0, 0);
   buzzerOff();
   if (demoMode != DEMO_OFF) {
     demoMode = DEMO_OFF;
@@ -477,18 +572,24 @@ bool wifiConnect() {
 }
 
 bool firebasePut(const String& path, const String& json) {
+  wdtFeed();
   WiFiClientSecure client;
   client.setInsecure();
   HTTPClient http;
   String url = basePath() + path + ".json" + authQuery();
   if (!http.begin(client, url)) {
     noteHttpFail();
+    wdtFeed();
     return false;
   }
+  http.setTimeout(HTTP_TIMEOUT_MS);
   http.addHeader("Content-Type", "application/json");
+  wdtFeed();
   int code = http.PUT(json);
+  wdtFeed();
   Serial.printf("PUT %s => %d\n", path.c_str(), code);
   http.end();
+  wdtFeed();
   if (code >= 200 && code < 300) {
     noteHttpOk();
     return true;
@@ -520,6 +621,7 @@ String lcdMirrorText() {
 
 void publishLcdMirror() {
   if (WiFi.status() != WL_CONNECTED) return;
+  if (lcdIsQuiet()) return;
   static String lastMirror;
   String mirror = lcdMirrorText();
   if (mirror == lastMirror) return;
@@ -528,18 +630,24 @@ void publishLcdMirror() {
 }
 
 String firebaseGet(const String& path) {
+  wdtFeed();
   WiFiClientSecure client;
   client.setInsecure();
   HTTPClient http;
   String url = basePath() + path + ".json" + authQuery();
   if (!http.begin(client, url)) {
     noteHttpFail();
+    wdtFeed();
     return "";
   }
+  http.setTimeout(HTTP_TIMEOUT_MS);
+  wdtFeed();
   int code = http.GET();
+  wdtFeed();
   String body = (code >= 200 && code < 300) ? http.getString() : "";
   Serial.printf("GET %s => %d\n", path.c_str(), code);
   http.end();
+  wdtFeed();
   if (code >= 200 && code < 300) {
     noteHttpOk();
     return body;
@@ -769,6 +877,9 @@ void publishTelemetry() {
            (unsigned long)(millis() / 1000));
 
   firebasePut("/telemetry", String(buf));
+  wdtFeed();
+  delay(30);
+  wdtFeed();
   char st[160];
   snprintf(st, sizeof(st),
            "{\"online\":true,\"ts\":%lu,\"resetReason\":\"%s\",\"rebootN\":%lu}",
@@ -870,6 +981,7 @@ void loop() {
   noteWifiOk();
 
   handleKeyToggle();
+  serviceActuators();
 
   // Firebase poll ~3s (non-blocking demo/auto continues between polls)
   if (now - lastCmdAt >= 3000) {
@@ -878,10 +990,12 @@ void loop() {
     String cmd = firebaseGet("/command");
     wdtFeed();
     handleCommand(cmd);
+    serviceActuators();
   }
 
   runDemo(millis());
   runAuto(millis());
+  serviceActuators();
 
   if (now - lastSensorLcdAt >= 1500) {
     lastSensorLcdAt = now;
