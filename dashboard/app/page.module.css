@@ -195,6 +195,19 @@
   background: rgba(239, 68, 68, 0.55);
 }
 
+.heroLcdRuleRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.65rem;
+}
+
+.heroLcd {
+  width: min(220px, 42vw);
+  flex: 0 0 auto;
+}
+
 .heroRuleBadges {
   display: flex;
   flex-wrap: wrap;

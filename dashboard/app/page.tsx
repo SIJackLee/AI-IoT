@@ -15,8 +15,8 @@ import { fetchTelemetry, putCommand, type Command, type Telemetry } from "@/lib/
 import { FanControl } from "@/components/FanControl";
 import { RgbPad } from "@/components/RgbPad";
 import { BuzzerPad } from "@/components/BuzzerPad";
-import { LcdPanel } from "@/components/LcdPanel";
-import { DemoPad, type DemoMode } from "@/components/DemoPad";
+import { LcdPanel, LcdPreview } from "@/components/LcdPanel";
+import { type DemoMode } from "@/components/DemoPad";
 import { AUTO_RULES, AutoPad, evalAutoRules, type ControlMode } from "@/components/AutoPad";
 import { HabitatScene, classifyRgb } from "@/components/motion/HabitatScene";
 import { ActuatorPhysics } from "@/components/motion/ActuatorPhysics";
@@ -233,28 +233,35 @@ export default function HomePage() {
             {demoLock ? ` · DEMO ${demoMode.toUpperCase()}` : ""}
           </p>
 
-          {autoOn ? (
-            <div className={styles.heroRuleBadges} aria-label="활성 자동 규칙">
-              {AUTO_RULES.filter((r) => autoEval[r.id]).map((r) => {
-                const Icon = r.Icon;
-                const danger = r.id === "r5";
-                return (
-                  <div
-                    key={r.id}
-                    className={`${styles.ruleBadge} ${danger ? styles.ruleBadgeDanger : ""}`}
-                    title={`${r.title} · ${r.hint}`}
-                  >
-                    <Icon size={16} strokeWidth={2.2} />
-                    <strong>{r.id.toUpperCase()}</strong>
-                    <span>{r.short}</span>
-                  </div>
-                );
-              })}
-              {AUTO_RULES.every((r) => !autoEval[r.id]) ? (
-                <span className={styles.ruleBadgeEmpty}>활성 규칙 없음</span>
-              ) : null}
-            </div>
-          ) : null}
+          <div className={styles.heroLcdRuleRow}>
+            <LcdPreview
+              preview={lcdPreview === "(지움)" ? "" : lcdPreview}
+              compact
+              className={styles.heroLcd}
+            />
+            {autoOn ? (
+              <div className={styles.heroRuleBadges} aria-label="활성 자동 규칙">
+                {AUTO_RULES.filter((r) => autoEval[r.id]).map((r) => {
+                  const Icon = r.Icon;
+                  const danger = r.id === "r5";
+                  return (
+                    <div
+                      key={r.id}
+                      className={`${styles.ruleBadge} ${danger ? styles.ruleBadgeDanger : ""}`}
+                      title={`${r.title} · ${r.hint}`}
+                    >
+                      <Icon size={16} strokeWidth={2.2} />
+                      <strong>{r.id.toUpperCase()}</strong>
+                      <span>{r.short}</span>
+                    </div>
+                  );
+                })}
+                {AUTO_RULES.every((r) => !autoEval[r.id]) ? (
+                  <span className={styles.ruleBadgeEmpty}>활성 규칙 없음</span>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
         </div>
         {error ? <p className={styles.error}>{error}</p> : null}
       </header>
@@ -308,7 +315,7 @@ export default function HomePage() {
               <div className={styles.sidePanelHead}>
                 <div>
                   <h2>장치 제어</h2>
-                  <p className={styles.panelHint}>자동규칙 · DEMO · 수동 액추에이터</p>
+                  <p className={styles.panelHint}>자동규칙 · 수동 액추에이터</p>
                 </div>
               </div>
 
@@ -340,19 +347,6 @@ export default function HomePage() {
                   />
                 </div>
                 <div className={styles.deviceCard}>
-                  <DemoPad
-                    mode={demoMode}
-                    disabled={busy}
-                    onChange={(next) =>
-                      send(
-                        next === "off"
-                          ? { demo: "off" }
-                          : { demo: next, auto: 0 },
-                      )
-                    }
-                  />
-                </div>
-                <div className={styles.deviceCard}>
                   <FanControl
                     on={fanOn}
                     disabled={busy || manualLock}
@@ -373,6 +367,7 @@ export default function HomePage() {
                   <LcdPanel
                     value={lcd}
                     preview={lcdPreview}
+                    showPreview={false}
                     disabled={busy || manualLock}
                     onChange={setLcd}
                     onSend={() => send({ lcd: lcd.trim() })}
