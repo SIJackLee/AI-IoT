@@ -10,6 +10,9 @@ export type Telemetry = {
   demo?: string;
   auto?: number;
   mode?: string;
+  /** 실물 LCD 16×2 미러 (32자 = line0+line1) */
+  lcd?: string;
+  lcdCustom?: boolean;
   ip?: string;
   rssi?: number;
   ts?: number;

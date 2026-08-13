@@ -71,6 +71,10 @@ export default function HomePage() {
       setOnline(Boolean(t));
       setError(null);
       if (t) {
+        if (typeof t.lcd === "string") {
+          const mirror = t.lcd.replace(/\n/g, "");
+          setLcdPreview(mirror.trim().length ? mirror : "                ");
+        }
         setHistory((prev) => {
           const next = [
             ...prev,

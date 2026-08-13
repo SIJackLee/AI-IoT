@@ -56,7 +56,6 @@ uint32_t lastTelAt = 0;
 uint32_t lastSensorLcdAt = 0;
 uint32_t lastAutoAt = 0;
 uint32_t lcdQuietUntil = 0;
-bool fanPwmReady = false;
 
 // 자동제어 (부저 제외)
 bool autoMode = false;
@@ -83,7 +82,6 @@ RTC_DATA_ATTR uint32_t rebootMagic = 0;
 RTC_DATA_ATTR uint32_t rebootN = 0;
 esp_reset_reason_t lastResetReason = ESP_RST_UNKNOWN;
 
-static const int FAN_PWM_CH = 0;
 static const uint32_t LCD_QUIET_FAN_MS = 450;
 static const uint32_t LCD_QUIET_RGB_MS = 220;
 static const uint32_t AUTO_PERIOD_MS = 3000;
@@ -196,21 +194,9 @@ void wdtBegin() {
   Serial.printf("Task WDT armed (%ds)\n", WDT_TIMEOUT_S);
 }
 
-void ensureFanPwm() {
-  if (fanPwmReady) return;
-  ledcSetup(FAN_PWM_CH, 20000, 8);
-  ledcAttachPin(PIN_FAN, FAN_PWM_CH);
-  ledcWrite(FAN_PWM_CH, 0);
-  fanPwmReady = true;
-}
-
 void forceFanOff() {
-  if (fanPwmReady) {
-    ledcWrite(FAN_PWM_CH, 0);
-  } else {
-    pinMode(PIN_FAN, OUTPUT);
-    digitalWrite(PIN_FAN, LOW);
-  }
+  pinMode(PIN_FAN, OUTPUT);
+  digitalWrite(PIN_FAN, LOW);
   fanState = 0;
 }
 
@@ -221,6 +207,7 @@ void buzzerOff() {
   buzzerState = 0;
 }
 
+// 환기팬: GPIO2 Digital ON/OFF (PWM 아님)
 void applyFan(int on) {
   if (!actuatorsReady) {
     forceFanOff();
@@ -231,24 +218,8 @@ void applyFan(int on) {
   if (next == fanState) return;
 
   noteLcdQuiet(LCD_QUIET_FAN_MS);
-  ensureFanPwm();
-
-  if (next) {
-    // 소프트 기동: 전류 스파이크를 줄여 LCD 전압 딥 완화
-    for (int d = 32; d < 255; d += 32) {
-      ledcWrite(FAN_PWM_CH, d);
-      delay(18);
-      wdtFeed();
-    }
-    ledcWrite(FAN_PWM_CH, 255);
-  } else {
-    for (int d = 224; d >= 0; d -= 32) {
-      ledcWrite(FAN_PWM_CH, d < 0 ? 0 : d);
-      delay(12);
-      wdtFeed();
-    }
-    ledcWrite(FAN_PWM_CH, 0);
-  }
+  pinMode(PIN_FAN, OUTPUT);
+  digitalWrite(PIN_FAN, next ? HIGH : LOW);
   fanState = next;
 }
 
@@ -526,6 +497,36 @@ bool firebasePut(const String& path, const String& json) {
   return false;
 }
 
+String jsonEscape(const String& s) {
+  String o;
+  o.reserve(s.length() + 8);
+  for (unsigned i = 0; i < s.length(); i++) {
+    char c = s[i];
+    if (c == '\r') continue;
+    if (c == '\n') {
+      o += "\\n";
+      continue;
+    }
+    if (c == '"' || c == '\\') o += '\\';
+    o += c;
+  }
+  return o;
+}
+
+/** 대시보드 미리보기용 32자(16+16) — LcdPanel/3D slice와 동일 */
+String lcdMirrorText() {
+  return pad16(lcdLine0) + pad16(lcdLine1);
+}
+
+void publishLcdMirror() {
+  if (WiFi.status() != WL_CONNECTED) return;
+  static String lastMirror;
+  String mirror = lcdMirrorText();
+  if (mirror == lastMirror) return;
+  lastMirror = mirror;
+  firebasePut("/telemetry/lcd", String("\"") + jsonEscape(mirror) + "\"");
+}
+
 String firebaseGet(const String& path) {
   WiFiClientSecure client;
   client.setInsecure();
@@ -706,6 +707,8 @@ void handleCommand(const String& body) {
 
   if (body.indexOf("\"lcd\":\"\"") >= 0 || body.indexOf("\"lcdClear\":true") >= 0) {
     clearCustomLcd();
+    showSensorLcd();
+    publishLcdMirror();
     return;
   }
 
@@ -718,14 +721,19 @@ void handleCommand(const String& body) {
       msg.replace("\\\"", "\"");
       if (msg.length() == 0 || msg == "                ") {
         clearCustomLcd();
+        showSensorLcd();
       } else {
         setCustomLcd(msg);
       }
+      publishLcdMirror();
     }
   }
 }
 
 void publishTelemetry() {
+  // LCD 라인을 먼저 갱신한 뒤 미러 필드에 포함
+  showSensorLcd();
+
   TempAndHumidity th = dht.getTempAndHumidity();
   float t = th.temperature;
   float h = th.humidity;
@@ -734,13 +742,14 @@ void publishTelemetry() {
   int soil = readSoilScaled();
   int cds = analogRead(PIN_CDS);
   int key = digitalRead(PIN_KEY);
+  String lcdEsc = jsonEscape(lcdMirrorText());
 
-  char buf[560];
+  char buf[640];
   snprintf(buf, sizeof(buf),
            "{\"t\":%.1f,\"h\":%.1f,\"soil\":%d,\"cds\":%d,"
            "\"fan\":%d,\"rgb\":{\"r\":%d,\"g\":%d,\"b\":%d},"
            "\"buzzer\":%d,\"key\":%d,\"demo\":\"%s\",\"auto\":%d,"
-           "\"mode\":\"%s\",\"lcdCustom\":%s,"
+           "\"mode\":\"%s\",\"lcdCustom\":%s,\"lcd\":\"%s\","
            "\"wifiFail\":%u,\"httpFail\":%u,"
            "\"resetReason\":\"%s\",\"rebootN\":%lu,"
            "\"ip\":\"%s\",\"rssi\":%d,\"ts\":%lu}",
@@ -751,6 +760,7 @@ void publishTelemetry() {
            autoMode ? 1 : 0,
            controlModeName(),
            lcdUserLock ? "true" : "false",
+           lcdEsc.c_str(),
            (unsigned)wifiFailN, (unsigned)httpFailN,
            resetReasonName(lastResetReason),
            (unsigned long)rebootN,
@@ -766,8 +776,6 @@ void publishTelemetry() {
            resetReasonName(lastResetReason),
            (unsigned long)rebootN);
   firebasePut("/status", String(st));
-
-  showSensorLcd();
 }
 
 void setup() {
@@ -815,6 +823,7 @@ void setup() {
   wdtFeed();
   Serial.printf("WiFi OK %s\n", WiFi.localIP().toString().c_str());
   setCustomLcd(String("WiFi OK\n") + WiFi.localIP().toString());
+  publishLcdMirror();
 
   firebasePut("/status", "{\"online\":true,\"boot\":true}");
   wdtFeed();
@@ -834,6 +843,7 @@ void loop() {
       Serial.println("Actuators armed");
       clearCustomLcd();
       showSensorLcd();
+      publishLcdMirror();
     } else {
       delay(50);
       wdtFeed();
