@@ -156,81 +156,213 @@ function Box({
   );
 }
 
+/** 후면 아크릴 팬 구멍 (BackAcrylicPanel / FanRotor11 공유) */
+const BACK_W = 1.45;
+const BACK_H = 2.7;
+const BACK_T = 0.04;
+const BACK_Z = -0.62;
+const FAN_HOLE_R = 0.3;
+const FAN_HOLE_X = 0.12;
+const FAN_HOLE_Y = 0.88; // 후면 상부 (제어보드와 겹치지 않게)
+
+/**
+ * 후면 아크릴 장착 DC 축류팬
+ * - 프레임·블레이드 사이·아크릴 원형 구멍은 실제 관통(솔리드 채움 없음)
+ */
 function FanRotor11({ spinning, hot }: { spinning: boolean; hot: boolean }) {
   const ref = useRef<Group>(null);
   const bladeGeo = useMemo(() => {
     const shape = new Shape();
-    shape.moveTo(0.08, -0.008);
-    shape.quadraticCurveTo(0.16, -0.022, 0.26, -0.018);
-    shape.quadraticCurveTo(0.34, -0.01, 0.36, 0.0);
-    shape.quadraticCurveTo(0.34, 0.01, 0.26, 0.016);
-    shape.quadraticCurveTo(0.16, 0.018, 0.08, 0.008);
+    shape.moveTo(0.075, -0.012);
+    shape.quadraticCurveTo(0.16, -0.03, 0.25, -0.022);
+    shape.quadraticCurveTo(0.29, -0.01, 0.3, 0.0);
+    shape.quadraticCurveTo(0.29, 0.01, 0.25, 0.02);
+    shape.quadraticCurveTo(0.16, 0.028, 0.075, 0.012);
     shape.closePath();
     const geo = new ExtrudeGeometry(shape, {
-      depth: 0.01,
+      depth: 0.014,
       bevelEnabled: true,
       bevelThickness: 0.0015,
       bevelSize: 0.0015,
       bevelSegments: 1,
       curveSegments: 12,
     });
-    geo.translate(0, 0, -0.005);
+    geo.translate(0, 0, -0.007);
     return geo;
   }, []);
 
-  // 후면 Z축(=벽 법선) 중심 회전 — 실기 fan ON과 동기
+  const frameGeo = useMemo(() => {
+    const outer = 0.36;
+    const shape = new Shape();
+    shape.moveTo(-outer, -outer);
+    shape.lineTo(outer, -outer);
+    shape.lineTo(outer, outer);
+    shape.lineTo(-outer, outer);
+    shape.closePath();
+    const hole = new Path();
+    hole.absarc(0, 0, FAN_HOLE_R - 0.01, 0, Math.PI * 2, true);
+    shape.holes.push(hole);
+    const g = new ExtrudeGeometry(shape, {
+      depth: 0.11,
+      bevelEnabled: false,
+      curveSegments: 48,
+    });
+    g.translate(0, 0, -0.055);
+    return g;
+  }, []);
+
   useFrame((_, dt) => {
     if (!ref.current || !spinning) return;
     ref.current.rotation.z += dt * (hot ? 22 : 14);
   });
 
+  const corners: [number, number][] = [
+    [-0.3, -0.3],
+    [0.3, -0.3],
+    [-0.3, 0.3],
+    [0.3, 0.3],
+  ];
+
+  // 후면 바깥에 부착 — 축=Z, 블레이드 XY, 구멍과 정렬
+  const fanZ = BACK_Z - BACK_T / 2 - 0.055;
   return (
-    <group position={[0, 1.05, -0.575]}>
-      <mesh>
-        <torusGeometry args={[0.355, 0.022, 10, 48]} />
-        <meshStandardMaterial color="#1e293b" roughness={0.45} metalness={0.08} />
-      </mesh>
-      <mesh>
-        <ringGeometry args={[0.34, 0.39, 48]} />
-        <meshStandardMaterial color="#334155" roughness={0.5} side={DoubleSide} />
+    <group position={[FAN_HOLE_X, FAN_HOLE_Y, fanZ]}>
+      <mesh geometry={frameGeo}>
+        <meshStandardMaterial color="#0f172a" roughness={0.55} metalness={0.12} side={DoubleSide} />
       </mesh>
 
+      <mesh position={[0, 0, 0.048]}>
+        <torusGeometry args={[FAN_HOLE_R - 0.012, 0.012, 8, 48]} />
+        <meshStandardMaterial color="#1e293b" roughness={0.45} metalness={0.15} />
+      </mesh>
+      <mesh position={[0, 0, -0.048]}>
+        <torusGeometry args={[FAN_HOLE_R - 0.012, 0.01, 8, 40]} />
+        <meshStandardMaterial color="#1e293b" roughness={0.5} metalness={0.1} />
+      </mesh>
+
+      {corners.map(([x, y], i) => (
+        <group key={i} position={[x, y, 0]}>
+          <Box args={[0.09, 0.09, 0.115]} color="#111827" roughness={0.5} />
+          <mesh position={[0, 0, 0.06]} rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[0.014, 0.014, 0.01, 12]} />
+            <meshStandardMaterial color="#64748b" metalness={0.55} roughness={0.35} />
+          </mesh>
+        </group>
+      ))}
+
+      {/* 바깥 가드 — 링/바만 */}
+      <group position={[0, 0, -0.062]}>
+        <mesh>
+          <torusGeometry args={[0.26, 0.007, 8, 40]} />
+          <meshStandardMaterial color="#334155" roughness={0.4} metalness={0.25} />
+        </mesh>
+        <mesh>
+          <torusGeometry args={[0.14, 0.006, 8, 32]} />
+          <meshStandardMaterial color="#334155" roughness={0.4} metalness={0.25} />
+        </mesh>
+        <Box args={[0.52, 0.012, 0.008]} color="#475569" metalness={0.2} roughness={0.4} />
+        <Box args={[0.012, 0.52, 0.008]} color="#475569" metalness={0.2} roughness={0.4} />
+      </group>
+
+      {/* 로터: 블레이드+허브만 (사이 관통) */}
       <group ref={ref}>
         {Array.from({ length: 11 }, (_, i) => {
           const a = (i / 11) * Math.PI * 2;
           return (
             <mesh key={i} geometry={bladeGeo} rotation={[0, 0, a]}>
               <meshStandardMaterial
-                color={spinning ? "#050505" : "#111827"}
-                roughness={0.55}
-                metalness={spinning ? 0.2 : 0.12}
+                color={spinning ? "#030712" : "#0f172a"}
+                roughness={0.5}
+                metalness={spinning ? 0.25 : 0.12}
+                side={DoubleSide}
               />
             </mesh>
           );
         })}
         <mesh rotation={[Math.PI / 2, 0, 0]}>
-          <cylinderGeometry args={[0.055, 0.062, 0.04, 20]} />
-          <meshStandardMaterial color="#1f2937" roughness={0.4} metalness={0.2} />
+          <cylinderGeometry args={[0.045, 0.05, 0.04, 20]} />
+          <meshStandardMaterial color="#1f2937" roughness={0.4} metalness={0.25} />
         </mesh>
         <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, 0.018]}>
-          <cylinderGeometry args={[0.02, 0.02, 0.014, 14]} />
-          <meshStandardMaterial color="#64748b" roughness={0.35} metalness={0.35} />
+          <cylinderGeometry args={[0.038, 0.038, 0.005, 20]} />
+          <meshStandardMaterial color="#e2e8f0" roughness={0.45} />
+        </mesh>
+        <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, 0.022]}>
+          <cylinderGeometry args={[0.016, 0.016, 0.004, 12]} />
+          <meshStandardMaterial
+            color={spinning ? "#22c55e" : "#64748b"}
+            emissive={spinning ? "#22c55e" : "#000000"}
+            emissiveIntensity={spinning ? 0.45 : 0}
+            roughness={0.4}
+          />
         </mesh>
       </group>
+
+      <group position={[0.2, -0.34, -0.02]}>
+        <Box args={[0.06, 0.04, 0.04]} color="#1e293b" roughness={0.55} />
+        <Box args={[0.01, 0.01, 0.06]} position={[-0.012, -0.02, -0.03]} color="#dc2626" roughness={0.5} />
+        <Box args={[0.01, 0.01, 0.06]} position={[0.012, -0.02, -0.03]} color="#111827" roughness={0.5} />
+      </group>
+
+      {spinning ? (
+        <pointLight
+          position={[0, 0, 0.2]}
+          color={hot ? "#fbbf24" : "#93c5c9"}
+          intensity={hot ? 0.3 : 0.15}
+          distance={1.2}
+          decay={2}
+        />
+      ) : null}
     </group>
   );
 }
 
-/** 팬 ON 시 통기구→내부 공기 입자 */
+/** FAN 헤더 → 후면 팬 */
+function FanPowerWire() {
+  const fanHdr: [number, number, number] = [0.32, -0.73, -0.68];
+  const fanPlug: [number, number, number] = [
+    FAN_HOLE_X + 0.18,
+    FAN_HOLE_Y - 0.32,
+    BACK_Z - 0.08,
+  ];
+  return (
+    <group>
+      <WirePath
+        color="#dc2626"
+        radius={0.008}
+        points={[
+          fanHdr,
+          [0.35, -0.2, -0.7],
+          [0.3, 0.3, -0.72],
+          [FAN_HOLE_X + 0.15, FAN_HOLE_Y - 0.4, BACK_Z - 0.1],
+          fanPlug,
+        ]}
+      />
+      <WirePath
+        color="#111827"
+        radius={0.008}
+        points={[
+          [fanHdr[0] + 0.02, fanHdr[1], fanHdr[2]],
+          [0.37, -0.18, -0.68],
+          [0.32, 0.32, -0.7],
+          [FAN_HOLE_X + 0.17, FAN_HOLE_Y - 0.38, BACK_Z - 0.09],
+          [fanPlug[0] + 0.02, fanPlug[1], fanPlug[2]],
+        ]}
+      />
+    </group>
+  );
+}
+
+/** 후면 팬 → 챔버 안(+Z) 공기 입자 */
 function AirflowParticles({ active, boost }: { active: boolean; boost: boolean }) {
   const group = useRef<Group>(null);
   const seeds = useMemo(
     () =>
       Array.from({ length: 28 }, (_, i) => ({
         id: i,
-        x: (Math.random() - 0.5) * 0.55,
-        y: 0.75 + Math.random() * 0.55,
-        z: -0.55 + Math.random() * 0.2,
+        x: FAN_HOLE_X + (Math.random() - 0.5) * 0.35,
+        y: FAN_HOLE_Y + (Math.random() - 0.5) * 0.35,
+        z: BACK_Z + 0.08,
         s: 0.012 + Math.random() * 0.018,
         phase: Math.random() * Math.PI * 2,
       })),
@@ -245,16 +377,16 @@ function AirflowParticles({ active, boost }: { active: boolean; boost: boolean }
     const speed = boost ? 1.8 : 1.1;
     g.children.forEach((child, i) => {
       const seed = seeds[i];
-      child.position.z += dt * speed * 0.55;
+      child.position.z += dt * speed * 0.5;
       child.position.x = seed.x + Math.sin(child.position.z * 4 + seed.phase) * 0.04;
       child.position.y = seed.y + Math.cos(child.position.z * 3 + seed.phase) * 0.03;
-      if (child.position.z > 0.55) {
-        child.position.z = -0.58;
+      if (child.position.z > 0.45) {
         child.position.x = seed.x;
         child.position.y = seed.y;
+        child.position.z = seed.z;
       }
       const mat = (child as Mesh).material as MeshBasicMaterial;
-      mat.opacity = active ? 0.15 + (0.55 - Math.abs(child.position.z)) * 0.35 : 0;
+      mat.opacity = active ? 0.12 + Math.max(0, (0.4 - child.position.z) * 0.25) : 0;
     });
   });
 
@@ -356,9 +488,12 @@ function RgbStrip({ rgb }: { rgb: { r: number; g: number; b: number } }) {
   );
 }
 
-/** LCD 16×2 — 대시보드 미리보기와 동일 문구 */
+/**
+ * 1602 캐릭터 LCD + I2C 백팩 (0x27) — 키트 전면 아크릴 장착
+ * 글라스 문구는 대시보드 lcd 미러(32자)와 동일
+ */
 function LcdScreen3D({ text }: { text: string }) {
-  const meshRef = useRef<Mesh>(null);
+  const glassRef = useRef<Mesh>(null);
   const texture = useMemo(() => {
     const canvas = document.createElement("canvas");
     canvas.width = 512;
@@ -372,44 +507,169 @@ function LcdScreen3D({ text }: { text: string }) {
     const canvas = texture.image as HTMLCanvasElement;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+    const W = canvas.width;
+    const H = canvas.height;
 
-    ctx.fillStyle = "#06140c";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "#0d2818";
-    ctx.fillRect(8, 8, canvas.width - 16, canvas.height - 16);
+    // 글라스 베이스 (파란 백라이트 1602)
+    ctx.fillStyle = "#041018";
+    ctx.fillRect(0, 0, W, H);
+    const glow = ctx.createLinearGradient(0, 0, 0, H);
+    glow.addColorStop(0, "#0a2848");
+    glow.addColorStop(0.5, "#0c3560");
+    glow.addColorStop(1, "#071e38");
+    ctx.fillStyle = glow;
+    ctx.fillRect(10, 8, W - 20, H - 16);
+
+    // 도트 매트릭스 느낌의 희미한 그리드
+    ctx.fillStyle = "rgba(0, 30, 60, 0.4)";
+    for (let y = 14; y < H - 12; y += 4) {
+      for (let x = 18; x < W - 18; x += 4) {
+        ctx.fillRect(x, y, 2, 2);
+      }
+    }
 
     const raw = text.trim() === "" ? "" : text;
     const line1 = raw.slice(0, 16).padEnd(16, " ");
     const line2 = raw.slice(16, 32).padEnd(16, " ");
 
-    ctx.font = "bold 42px 'Courier New', ui-monospace, monospace";
-    ctx.fillStyle = "#86efac";
+    ctx.font = "bold 40px 'Courier New', ui-monospace, monospace";
     ctx.textBaseline = "middle";
-    ctx.fillText(line1, 28, 44);
-    ctx.fillText(line2, 28, 92);
+    ctx.shadowColor = "#38bdf8";
+    ctx.shadowBlur = 6;
+    ctx.fillStyle = "#7dd3fc";
+    ctx.fillText(line1, 26, 42);
+    ctx.fillText(line2, 26, 90);
+    ctx.shadowBlur = 0;
+
+    // 상단 가장자리 하이라이트
+    ctx.fillStyle = "rgba(125, 211, 252, 0.1)";
+    ctx.fillRect(10, 8, W - 20, 6);
+
     texture.needsUpdate = true;
   }, [text, texture]);
 
   useFrame(({ clock }) => {
-    if (!meshRef.current) return;
-    (meshRef.current.material as MeshStandardMaterial).emissiveIntensity =
-      0.35 + Math.sin(clock.elapsedTime * 1.6) * 0.08;
+    if (!glassRef.current) return;
+    (glassRef.current.material as MeshStandardMaterial).emissiveIntensity =
+      0.42 + Math.sin(clock.elapsedTime * 1.5) * 0.06;
   });
 
+  // 실물 1602 ≈ 80×36mm 비율, 전면 아크릴 바깥에 살짝 돌출
   return (
-    <group position={[0, -0.55, 0.62]}>
-      <Box args={[0.85, 0.42, 0.06]} color="#1e293b" />
-      <mesh ref={meshRef} position={[0, 0.02, 0.036]}>
-        <planeGeometry args={[0.72, 0.28]} />
+    <group position={[0, -0.52, 0.66]}>
+      {/* 메인 PCB */}
+      <Box args={[0.88, 0.4, 0.018]} color="#15803d" roughness={0.55} metalness={0.08} />
+      {/* PCB 가장자리 실크 */}
+      <Box args={[0.86, 0.38, 0.002]} position={[0, 0, 0.01]} color="#166534" roughness={0.65} />
+
+      {/* 검정 베젤 / 마스크 */}
+      <Box args={[0.78, 0.3, 0.02]} position={[0, 0.01, 0.022]} color="#0f172a" roughness={0.7} />
+      {/* 베젤 안쪽 단차 */}
+      <Box args={[0.7, 0.24, 0.008]} position={[0, 0.01, 0.034]} color="#020617" roughness={0.85} />
+
+      {/* 액정 글라스 */}
+      <mesh ref={glassRef} position={[0, 0.01, 0.04]}>
+        <planeGeometry args={[0.66, 0.2]} />
         <meshStandardMaterial
           map={texture}
           emissiveMap={texture}
-          emissive="#86efac"
-          emissiveIntensity={0.4}
-          roughness={0.55}
+          emissive="#38bdf8"
+          emissiveIntensity={0.45}
+          roughness={0.35}
+          metalness={0.05}
           toneMapped={false}
         />
       </mesh>
+      {/* 글라스 반사 틴트 */}
+      <mesh position={[0, 0.01, 0.041]}>
+        <planeGeometry args={[0.66, 0.2]} />
+        <meshStandardMaterial
+          color="#7dd3fc"
+          transparent
+          opacity={0.06}
+          roughness={0.1}
+          metalness={0.4}
+          depthWrite={false}
+        />
+      </mesh>
+
+      {/* 네 모서리 장착 홀 */}
+      {(
+        [
+          [-0.38, 0.15],
+          [0.38, 0.15],
+          [-0.38, -0.15],
+          [0.38, -0.15],
+        ] as [number, number][]
+      ).map(([x, y], i) => (
+        <group key={i} position={[x, y, 0.012]}>
+          <mesh rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[0.018, 0.018, 0.01, 12]} />
+            <meshStandardMaterial color="#334155" roughness={0.5} metalness={0.4} />
+          </mesh>
+          <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, 0.002]}>
+            <cylinderGeometry args={[0.008, 0.008, 0.012, 10]} />
+            <meshStandardMaterial color="#0f172a" roughness={0.9} />
+          </mesh>
+        </group>
+      ))}
+
+      {/* 상단 16핀 헤더 실루엣 (베젤 뒤 PCB) */}
+      {Array.from({ length: 16 }, (_, i) => {
+        const x = -0.34 + i * 0.045;
+        return (
+          <Box
+            key={i}
+            args={[0.012, 0.012, 0.028]}
+            position={[x, 0.175, -0.008]}
+            color="#e2e8f0"
+            metalness={0.55}
+            roughness={0.35}
+          />
+        );
+      })}
+
+      {/* I2C 백팩 — 정면에서 왼쪽 */}
+      <group position={[-0.22, -0.02, -0.028]}>
+        <Box args={[0.32, 0.22, 0.018]} color="#1d4ed8" roughness={0.5} metalness={0.1} />
+        {/* PCF8574 */}
+        <Box args={[0.08, 0.06, 0.02]} position={[0.06, 0.02, 0.016]} color="#111827" roughness={0.45} />
+        {/* 콘트라스트 트리머 (파란 볼륨) */}
+        <mesh position={[-0.08, 0.04, 0.02]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.028, 0.028, 0.022, 16]} />
+          <meshStandardMaterial color="#2563eb" roughness={0.45} />
+        </mesh>
+        <mesh position={[-0.08, 0.04, 0.032]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.012, 0.012, 0.008, 10]} />
+          <meshStandardMaterial color="#f8fafc" roughness={0.4} />
+        </mesh>
+        {/* I2C 4핀 헤더 (GND VCC SDA SCL) — 왼쪽 가장자리 */}
+        <group position={[-0.02, -0.09, 0.02]}>
+          <Box args={[0.14, 0.04, 0.035]} color="#1e293b" roughness={0.55} />
+          {([-0.045, -0.015, 0.015, 0.045] as number[]).map((px, i) => (
+            <Box
+              key={i}
+              args={[0.014, 0.014, 0.05]}
+              position={[px, 0, 0.02]}
+              color="#fbbf24"
+              metalness={0.5}
+              roughness={0.35}
+            />
+          ))}
+        </group>
+        {/* 점퍼/칩 커패시터 */}
+        <Box args={[0.03, 0.02, 0.012]} position={[-0.1, -0.04, 0.014]} color="#0f172a" roughness={0.6} />
+        <Box args={[0.02, 0.015, 0.01]} position={[0.12, -0.05, 0.012]} color="#f59e0b" metalness={0.3} roughness={0.5} />
+      </group>
+
+      {/* 백라이트 은은한 발광 */}
+      <pointLight
+        position={[0, 0.01, 0.08]}
+        color="#38bdf8"
+        intensity={0.35}
+        distance={1.2}
+        decay={2}
+      />
     </group>
   );
 }
@@ -469,75 +729,43 @@ function SensorBank({
   );
 }
 
-/** 후면 아크릴 — 팬 위치 원형 통기구 */
-function BackAcrylicWithFanVent() {
+/** 후면 아크릴 — 상부 팬용 원형 구멍(실제 관통) */
+function BackAcrylicPanel() {
   const geo = useMemo(() => {
-    const w = 1.45;
-    const h = 2.7;
-    const depth = 0.04;
     const shape = new Shape();
-    shape.moveTo(-w / 2, -h / 2);
-    shape.lineTo(w / 2, -h / 2);
-    shape.lineTo(w / 2, h / 2);
-    shape.lineTo(-w / 2, h / 2);
+    const hw = BACK_W / 2;
+    const hh = BACK_H / 2;
+    shape.moveTo(-hw, -hh);
+    shape.lineTo(hw, -hh);
+    shape.lineTo(hw, hh);
+    shape.lineTo(-hw, hh);
     shape.closePath();
 
-    const vent = new Path();
-    vent.absarc(0, 1.05, 0.36, 0, Math.PI * 2, true);
-    shape.holes.push(vent);
+    const hole = new Path();
+    hole.absarc(FAN_HOLE_X, FAN_HOLE_Y, FAN_HOLE_R, 0, Math.PI * 2, true);
+    shape.holes.push(hole);
 
     const g = new ExtrudeGeometry(shape, {
-      depth,
+      depth: BACK_T,
       bevelEnabled: false,
-      curveSegments: 48,
+      curveSegments: 56,
     });
-    g.translate(0, 0, -depth / 2);
+    // Shape(XY) → Extrude(+Z) → 후면 두께 중앙이 BACK_Z
+    g.translate(0, 0, -BACK_T / 2);
     return g;
   }, []);
 
   return (
-    <group position={[0, 0, -0.62]}>
-      <mesh geometry={geo}>
-        <meshStandardMaterial
-          color="#dceadf"
-          transparent
-          opacity={0.3}
-          roughness={0.15}
-          depthWrite={false}
-          side={DoubleSide}
-        />
-      </mesh>
-      <mesh position={[0, 1.05, 0.005]}>
-        <ringGeometry args={[0.36, 0.4, 48]} />
-        <meshStandardMaterial color="#94a3b8" roughness={0.4} side={DoubleSide} />
-      </mesh>
-    </group>
-  );
-}
-
-function CrossVents() {
-  const holes: [number, number, number][] = [
-    [0.722, 0.85, 0],
-    [0.722, 1.05, 0],
-    [0.722, 0.65, 0],
-    [0.722, 0.85, 0.2],
-    [0.722, 0.85, -0.2],
-  ];
-  return (
-    <group>
-      {holes.map((p, i) => (
-        <group key={i} position={p} rotation={[0, Math.PI / 2, 0]}>
-          <mesh>
-            <circleGeometry args={[0.075, 28]} />
-            <meshStandardMaterial color="#0b1220" roughness={1} />
-          </mesh>
-          <mesh position={[0, 0, 0.001]}>
-            <ringGeometry args={[0.075, 0.092, 28]} />
-            <meshStandardMaterial color="#a8b5ae" roughness={0.4} />
-          </mesh>
-        </group>
-      ))}
-    </group>
+    <mesh position={[0, 0, BACK_Z]} geometry={geo}>
+      <meshStandardMaterial
+        color="#dceadf"
+        transparent
+        opacity={0.3}
+        roughness={0.15}
+        metalness={0}
+        side={DoubleSide}
+      />
+    </mesh>
   );
 }
 
@@ -647,6 +875,239 @@ function PeaPlant({
   );
 }
 
+/**
+ * SmartFarm-Mini-V04 제어보드
+ * - PCB 뒷면 = 후면 아크릴 바깥면 밀착 (챔버 밖)
+ * - rotation Y=π: 부품면이 외부 / Z=π: 흰 JST가 보드 하단(아래)을 향함
+ */
+function ControlBoardMiniV04({ online }: { online?: boolean }) {
+  const ledRef = useRef<Mesh>(null);
+  useFrame(({ clock }) => {
+    if (!ledRef.current) return;
+    const mat = ledRef.current.material as MeshStandardMaterial;
+    mat.emissiveIntensity = online === false ? 0.15 : 0.55 + Math.sin(clock.elapsedTime * 3) * 0.25;
+  });
+
+  const jst = [-0.26, -0.13, 0, 0.13, 0.26];
+  const jstLabels = ["PLANT", "SOIL", "LCD", "Temp", "CDS"];
+  const boardT = 0.028;
+  // 후면 아크릴 바깥면 z=-0.64 → 보드 전체가 벽 밖, 뒷면 밀착
+  const outerFaceZ = -0.64;
+  const flushZ = outerFaceZ - boardT / 2;
+
+  return (
+    <group position={[0, -0.95, flushZ]} rotation={[0, Math.PI, Math.PI]}>
+      {/* PCB body — green FR4, wide back flush on acrylic exterior */}
+      <Box args={[0.92, 0.62, boardT]} color="#15803d" roughness={0.55} metalness={0.08} />
+      {/* silk / edge darken on component face */}
+      <Box
+        args={[0.9, 0.6, 0.002]}
+        position={[0, 0, boardT / 2 + 0.001]}
+        color="#166534"
+        roughness={0.65}
+      />
+
+      {/* ESP32-WROOM */}
+      <group position={[0.02, -0.08, 0.03]}>
+        <Box args={[0.28, 0.2, 0.04]} color="#64748b" metalness={0.65} roughness={0.3} />
+        <Box args={[0.22, 0.14, 0.006]} position={[0, 0, 0.024]} color="#94a3b8" metalness={0.5} roughness={0.35} />
+        <Box args={[0.06, 0.02, 0.035]} position={[0.14, 0, 0.01]} color="#0f172a" roughness={0.8} />
+      </group>
+
+      {/* USB Type-B (left edge) */}
+      <group position={[-0.42, 0.02, 0.02]}>
+        <Box args={[0.08, 0.12, 0.05]} color="#e2e8f0" metalness={0.4} roughness={0.4} />
+        <Box args={[0.04, 0.08, 0.028]} position={[-0.03, 0, 0]} color="#0f172a" roughness={0.9} />
+      </group>
+
+      {/* DC jack */}
+      <group position={[0.38, 0.18, 0.025]}>
+        <mesh rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.028, 0.028, 0.06, 16]} />
+          <meshStandardMaterial color="#1f2937" roughness={0.4} metalness={0.35} />
+        </mesh>
+        <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, 0.01]}>
+          <cylinderGeometry args={[0.014, 0.014, 0.02, 12]} />
+          <meshStandardMaterial color="#0b1220" roughness={1} />
+        </mesh>
+      </group>
+
+      {/* Power rocker switch (red) */}
+      <group position={[0.38, 0.02, 0.04]}>
+        <Box args={[0.07, 0.1, 0.05]} color="#7f1d1d" roughness={0.45} />
+        <Box args={[0.055, 0.08, 0.02]} position={[0, 0.008, 0.028]} color="#ef4444" roughness={0.35} />
+      </group>
+
+      {/* KEY button */}
+      <group position={[-0.12, 0.12, 0.035]}>
+        <Box args={[0.06, 0.06, 0.02]} color="#334155" roughness={0.5} />
+        <mesh position={[0, 0, 0.018]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.018, 0.018, 0.016, 16]} />
+          <meshStandardMaterial color="#e2e8f0" roughness={0.4} />
+        </mesh>
+      </group>
+
+      {/* Reset */}
+      <group position={[0.22, -0.2, 0.03]}>
+        <mesh rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.012, 0.012, 0.02, 12]} />
+          <meshStandardMaterial color="#f8fafc" roughness={0.45} />
+        </mesh>
+      </group>
+
+      {/* Buzzer */}
+      <group position={[0.08, 0.14, 0.035]}>
+        <mesh rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.032, 0.032, 0.022, 24]} />
+          <meshStandardMaterial color="#0f172a" roughness={0.55} />
+        </mesh>
+        <mesh position={[0, 0, 0.012]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.018, 0.018, 0.004, 16]} />
+          <meshStandardMaterial color="#1e293b" roughness={0.6} />
+        </mesh>
+      </group>
+
+      {/* Status LEDs */}
+      <mesh position={[-0.28, -0.18, 0.03]}>
+        <boxGeometry args={[0.02, 0.02, 0.012]} />
+        <meshStandardMaterial color="#22c55e" emissive="#22c55e" emissiveIntensity={0.4} />
+      </mesh>
+      <mesh position={[-0.22, -0.18, 0.03]}>
+        <boxGeometry args={[0.02, 0.02, 0.012]} />
+        <meshStandardMaterial color="#eab308" emissive="#eab308" emissiveIntensity={0.35} />
+      </mesh>
+      <mesh ref={ledRef} position={[0.3, -0.12, 0.03]}>
+        <boxGeometry args={[0.022, 0.022, 0.014]} />
+        <meshStandardMaterial color="#4ade80" emissive="#22c55e" emissiveIntensity={0.5} />
+      </mesh>
+
+      {/* FAN header */}
+      <group position={[0.32, -0.22, 0.03]}>
+        <Box args={[0.05, 0.04, 0.035]} color="#f8fafc" roughness={0.45} />
+        <Box args={[0.012, 0.012, 0.02]} position={[-0.012, 0, 0.02]} color="#fbbf24" metalness={0.4} />
+        <Box args={[0.012, 0.012, 0.02]} position={[0.012, 0, 0.02]} color="#fbbf24" metalness={0.4} />
+      </group>
+
+      {/* JST 행 — 로컬 +Y 가장자리(= Z=π 후 월드 아래). 개구가 +Y(아래) */}
+      {jst.map((x, i) => (
+        <group key={jstLabels[i]} position={[x, 0.3, 0.025]}>
+          <Box args={[0.072, 0.07, 0.045]} color="#f1f5f9" roughness={0.4} />
+          <Box args={[0.055, 0.022, 0.032]} position={[0, 0.04, 0.004]} color="#0f172a" roughness={0.85} />
+          <Box args={[0.012, 0.02, 0.012]} position={[-0.018, 0.012, 0.028]} color="#fbbf24" metalness={0.45} />
+          <Box args={[0.012, 0.02, 0.012]} position={[0, 0.012, 0.028]} color="#fbbf24" metalness={0.45} />
+          <Box args={[0.012, 0.02, 0.012]} position={[0.018, 0.012, 0.028]} color="#fbbf24" metalness={0.45} />
+        </group>
+      ))}
+
+      {/* regulator / cap */}
+      <mesh position={[0.22, 0.18, 0.04]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.02, 0.02, 0.045, 14]} />
+        <meshStandardMaterial color="#111827" roughness={0.45} />
+      </mesh>
+      <Box args={[0.05, 0.04, 0.035]} position={[0.12, 0.2, 0.03]} color="#1e293b" metalness={0.3} roughness={0.5} />
+    </group>
+  );
+}
+
+/** 제어보드 JST 월드 좌표 — ControlBoardMiniV04 배치와 동기 */
+const BOARD_ORIGIN: [number, number, number] = [0, -0.95, -0.64 - 0.014];
+/** rotation [0,π,π] 적용: local (x,y,z) → (x, -y, -z) */
+function jstWorld(localX: number): [number, number, number] {
+  const ly = 0.34; // 커넥터 개구 쪽
+  const lz = 0.05;
+  return [BOARD_ORIGIN[0] + localX, BOARD_ORIGIN[1] - ly, BOARD_ORIGIN[2] - lz];
+}
+
+function BoardSensorWires() {
+  // PLANT / SOIL / LCD / Temp / CDS
+  const plant = jstWorld(-0.26);
+  const soil = jstWorld(-0.13);
+  const lcd = jstWorld(0);
+  const temp = jstWorld(0.13);
+  const cds = jstWorld(0.26);
+  const pass: [number, number, number] = [-0.48, -1.12, -0.62];
+
+  return (
+    <group>
+      {/* PLANT → RGB 생장등 */}
+      <WirePath
+        color="#db2777"
+        radius={0.01}
+        points={[
+          plant,
+          [plant[0], -1.28, plant[2]],
+          [-0.4, -1.2, -0.68],
+          pass,
+          [-0.45, -0.4, -0.35],
+          [-0.35, 0.4, -0.1],
+          [-0.2, 1.0, 0.05],
+          [0, 1.35, 0.12],
+        ]}
+      />
+      {/* SOIL → 토양 모듈 */}
+      <WirePath
+        color="#a16207"
+        radius={0.01}
+        points={[
+          soil,
+          [soil[0], -1.28, soil[2]],
+          [-0.42, -1.18, -0.66],
+          pass,
+          [-0.5, -0.5, -0.3],
+          [-0.55, 0.1, 0.05],
+          [-0.65, 0.55, 0.12],
+          [-0.72, 0.8, 0.15],
+        ]}
+      />
+      {/* LCD → 전면 1602 왼쪽 I2C 4핀 */}
+      <WirePath
+        color="#64748b"
+        radius={0.01}
+        points={[
+          lcd,
+          [lcd[0], -1.28, lcd[2]],
+          [-0.35, -1.18, -0.65],
+          pass,
+          [-0.4, -0.95, -0.15],
+          [-0.35, -0.75, 0.25],
+          [-0.3, -0.65, 0.5],
+          [-0.24, -0.61, 0.62],
+        ]}
+      />
+      {/* Temp → DHT */}
+      <WirePath
+        color="#2563eb"
+        radius={0.01}
+        points={[
+          temp,
+          [temp[0], -1.28, temp[2]],
+          [-0.3, -1.18, -0.65],
+          pass,
+          [-0.52, -0.4, -0.2],
+          [-0.58, 0.2, 0.1],
+          [-0.68, 0.65, 0.28],
+          [-0.72, 0.9, 0.37],
+        ]}
+      />
+      {/* CDS → 조도 */}
+      <WirePath
+        color="#ca8a04"
+        radius={0.01}
+        points={[
+          cds,
+          [cds[0], -1.28, cds[2]],
+          [-0.25, -1.18, -0.64],
+          pass,
+          [-0.48, -0.35, -0.25],
+          [-0.55, 0.25, 0.0],
+          [-0.65, 0.7, -0.05],
+          [-0.72, 0.9, -0.07],
+        ]}
+      />
+    </group>
+  );
+}
+
 function KitTower({ t, h, soil, cds, fan, rgb, lcd }: Props) {
   const wilt = soil !== null && soil < 27;
   const hot = t !== null && t >= 28;
@@ -670,7 +1131,7 @@ function KitTower({ t, h, soil, cds, fan, rgb, lcd }: Props) {
       <Box args={[1.55, 0.12, 1.35]} position={[0, -1.42, 0]} color="#111827" roughness={0.85} />
 
       <Box args={[1.45, 2.7, 0.04]} position={[0, 0, 0.62]} color="#dceadf" opacity={0.28} roughness={0.15} />
-      <BackAcrylicWithFanVent />
+      <BackAcrylicPanel />
       <Box args={[0.04, 2.7, 1.2]} position={[-0.72, 0, 0]} color="#dceadf" opacity={0.3} roughness={0.15} />
       <Box args={[0.04, 2.7, 1.2]} position={[0.72, 0, 0]} color="#dceadf" opacity={0.3} roughness={0.15} />
       <Box args={[1.45, 0.04, 1.28]} position={[0, 1.36, 0]} color="#dceadf" opacity={0.35} roughness={0.15} />
@@ -688,8 +1149,8 @@ function KitTower({ t, h, soil, cds, fan, rgb, lcd }: Props) {
 
       <SensorBank t={t} soil={soil} cds={cds} />
 
-      <CrossVents />
       <FanRotor11 spinning={fan} hot={hot} />
+      <FanPowerWire />
 
       <SquarePass
         position={[-0.48, -1.12, -0.62]}
@@ -698,69 +1159,8 @@ function KitTower({ t, h, soil, cds, fan, rgb, lcd }: Props) {
         rotation={[Math.PI / 2, 0, 0]}
       />
 
-      <group position={[0, -0.95, -0.55]}>
-        <Box args={[0.7, 0.45, 0.08]} color="#166534" />
-        <Box args={[0.35, 0.12, 0.05]} position={[0, 0.05, 0.05]} color="#94a3b8" />
-        {[-0.22, -0.11, 0, 0.11, 0.22].map((x, i) => (
-          <Box
-            key={i}
-            args={[0.04, 0.06, 0.035]}
-            position={[x, -0.24, 0.04]}
-            color="#cbd5e1"
-            metalness={0.55}
-            roughness={0.35}
-          />
-        ))}
-      </group>
-
-      <WirePath
-        color="#2563eb"
-        radius={0.011}
-        points={[
-          [-0.72, 0.82, 0.37],
-          [-0.62, 0.55, 0.28],
-          [-0.55, 0.28, 0.18],
-          [-0.52, 0.08, 0.12],
-          [-0.52, -0.15, 0.05],
-          [-0.52, -0.55, -0.25],
-          [-0.5, -0.95, -0.55],
-          [-0.48, -1.12, -0.62],
-          [-0.35, -1.12, -0.58],
-          [-0.22, -1.15, -0.52],
-        ]}
-      />
-      <WirePath
-        color="#a16207"
-        radius={0.011}
-        points={[
-          [-0.72, 0.8, 0.15],
-          [-0.6, 0.5, 0.12],
-          [-0.54, 0.25, 0.1],
-          [-0.5, 0.08, 0.1],
-          [-0.5, -0.2, 0.02],
-          [-0.5, -0.6, -0.28],
-          [-0.48, -0.98, -0.56],
-          [-0.46, -1.12, -0.62],
-          [-0.28, -1.14, -0.57],
-          [-0.11, -1.16, -0.52],
-        ]}
-      />
-      <WirePath
-        color="#ca8a04"
-        radius={0.011}
-        points={[
-          [-0.72, 0.82, -0.07],
-          [-0.58, 0.48, 0.02],
-          [-0.52, 0.22, 0.06],
-          [-0.48, 0.08, 0.08],
-          [-0.48, -0.25, -0.02],
-          [-0.48, -0.65, -0.32],
-          [-0.46, -1.0, -0.57],
-          [-0.44, -1.12, -0.62],
-          [-0.2, -1.15, -0.56],
-          [0.0, -1.17, -0.52],
-        ]}
-      />
+      <ControlBoardMiniV04 online />
+      <BoardSensorWires />
 
       <mesh ref={heatRef} position={[0, 0.7, 0]} visible={false}>
         <boxGeometry args={[1.2, 1.6, 1.0]} />
