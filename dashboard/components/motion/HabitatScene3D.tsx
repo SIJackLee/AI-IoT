@@ -1,10 +1,23 @@
 "use client";
 
-import { Component, useMemo, useRef, type ReactNode } from "react";
+import { Component, useLayoutEffect, useMemo, useRef, type ReactNode } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
-import { DoubleSide, ExtrudeGeometry, Path, Quaternion, Shape, Vector3, type Group, type Mesh, type MeshBasicMaterial, type MeshStandardMaterial, type PointLight } from "three";
-import type { RgbKind } from "./rgb";
+import {
+  CanvasTexture,
+  Color,
+  DoubleSide,
+  ExtrudeGeometry,
+  Path,
+  Quaternion,
+  Shape,
+  Vector3,
+  type Group,
+  type Mesh,
+  type MeshBasicMaterial,
+  type MeshStandardMaterial,
+  type PointLight,
+} from "three";
 import styles from "./motion.module.css";
 
 type Props = {
@@ -13,14 +26,8 @@ type Props = {
   soil: number | null;
   cds: number | null;
   fan: boolean;
-  rgb: RgbKind;
-};
-
-const RGB_COLOR: Record<RgbKind, string> = {
-  off: "#94a3b8",
-  amber: "#c9851a",
-  red: "#d1435b",
-  white: "#dbe4ee",
+  rgb: { r: number; g: number; b: number };
+  lcd: string;
 };
 
 class SceneErrorBoundary extends Component<
@@ -171,9 +178,10 @@ function FanRotor11({ spinning, hot }: { spinning: boolean; hot: boolean }) {
     return geo;
   }, []);
 
+  // 후면 Z축(=벽 법선) 중심 회전 — 실기 fan ON과 동기
   useFrame((_, dt) => {
     if (!ref.current || !spinning) return;
-    ref.current.rotation.z += dt * (hot ? 16 : 9);
+    ref.current.rotation.z += dt * (hot ? 22 : 14);
   });
 
   return (
@@ -304,49 +312,104 @@ function HumidityMist({ level }: { level: number | null }) {
   );
 }
 
-function RgbStrip({ kind }: { kind: RgbKind }) {
+function RgbStrip({ rgb }: { rgb: { r: number; g: number; b: number } }) {
   const meshRef = useRef<Mesh>(null);
   const lightRef = useRef<PointLight>(null);
-  const on = kind !== "off";
-  const hex = RGB_COLOR[kind];
+  const color = useMemo(() => new Color(rgb.r / 255, rgb.g / 255, rgb.b / 255), [rgb.r, rgb.g, rgb.b]);
+  const level = Math.max(rgb.r, rgb.g, rgb.b) / 255;
+  const on = level > 0.02;
 
   useFrame(({ clock }) => {
     const mesh = meshRef.current;
     if (!mesh) return;
     const mat = mesh.material as MeshStandardMaterial;
+    mat.color.copy(color);
+    mat.emissive.copy(color);
     if (!on) {
       mat.emissiveIntensity = 0;
       if (lightRef.current) lightRef.current.intensity = 0;
       return;
     }
-    const pulse =
-      kind === "red"
-        ? 1.4 + Math.sin(clock.elapsedTime * 6) * 0.7
-        : kind === "amber"
-          ? 1.2 + Math.sin(clock.elapsedTime * 3.2) * 0.45
-          : 1.1 + Math.sin(clock.elapsedTime * 2.2) * 0.25;
+    const pulse = 0.85 + level * 1.35 + Math.sin(clock.elapsedTime * (2.5 + level * 3)) * (0.15 + level * 0.25);
     mat.emissiveIntensity = pulse;
-    if (lightRef.current) lightRef.current.intensity = pulse * 0.9;
+    if (lightRef.current) {
+      lightRef.current.color.copy(color);
+      lightRef.current.intensity = pulse * (0.7 + level * 0.8);
+    }
   });
 
   return (
     <group>
       <mesh ref={meshRef} position={[0, 1.4, 0.15]}>
         <boxGeometry args={[0.9, 0.05, 0.12]} />
-        <meshStandardMaterial
-          color={hex}
-          emissive={hex}
-          emissiveIntensity={on ? 1.2 : 0}
-          roughness={0.35}
-        />
+        <meshStandardMaterial color={color} emissive={color} emissiveIntensity={on ? 1.2 : 0} roughness={0.3} />
       </mesh>
       <pointLight
         ref={lightRef}
         position={[0, 1.5, 0.3]}
         intensity={on ? 1.1 : 0}
-        color={hex}
-        distance={4}
+        color={color}
+        distance={4.5}
+        decay={2}
       />
+    </group>
+  );
+}
+
+/** LCD 16×2 — 대시보드 미리보기와 동일 문구 */
+function LcdScreen3D({ text }: { text: string }) {
+  const meshRef = useRef<Mesh>(null);
+  const texture = useMemo(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 512;
+    canvas.height = 128;
+    const tex = new CanvasTexture(canvas);
+    tex.anisotropy = 4;
+    return tex;
+  }, []);
+
+  useLayoutEffect(() => {
+    const canvas = texture.image as HTMLCanvasElement;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    ctx.fillStyle = "#06140c";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#0d2818";
+    ctx.fillRect(8, 8, canvas.width - 16, canvas.height - 16);
+
+    const raw = text.trim() === "" ? "" : text;
+    const line1 = raw.slice(0, 16).padEnd(16, " ");
+    const line2 = raw.slice(16, 32).padEnd(16, " ");
+
+    ctx.font = "bold 42px 'Courier New', ui-monospace, monospace";
+    ctx.fillStyle = "#86efac";
+    ctx.textBaseline = "middle";
+    ctx.fillText(line1, 28, 44);
+    ctx.fillText(line2, 28, 92);
+    texture.needsUpdate = true;
+  }, [text, texture]);
+
+  useFrame(({ clock }) => {
+    if (!meshRef.current) return;
+    (meshRef.current.material as MeshStandardMaterial).emissiveIntensity =
+      0.35 + Math.sin(clock.elapsedTime * 1.6) * 0.08;
+  });
+
+  return (
+    <group position={[0, -0.55, 0.62]}>
+      <Box args={[0.85, 0.42, 0.06]} color="#1e293b" />
+      <mesh ref={meshRef} position={[0, 0.02, 0.036]}>
+        <planeGeometry args={[0.72, 0.28]} />
+        <meshStandardMaterial
+          map={texture}
+          emissiveMap={texture}
+          emissive="#86efac"
+          emissiveIntensity={0.4}
+          roughness={0.55}
+          toneMapped={false}
+        />
+      </mesh>
     </group>
   );
 }
@@ -584,28 +647,22 @@ function PeaPlant({
   );
 }
 
-function KitTower({ t, h, soil, cds, fan, rgb }: Props) {
+function KitTower({ t, h, soil, cds, fan, rgb, lcd }: Props) {
   const wilt = soil !== null && soil < 27;
   const hot = t !== null && t >= 28;
   const soilLevel = soil === null ? 0.4 : Math.max(0, Math.min(1, soil / 100));
   const heatRef = useRef<Mesh>(null);
-  const lcdRef = useRef<Mesh>(null);
 
   useFrame(({ clock }) => {
     const mesh = heatRef.current;
-    if (mesh) {
-      if (!hot) {
-        mesh.visible = false;
-      } else {
-        mesh.visible = true;
-        (mesh.material as MeshBasicMaterial).opacity =
-          0.1 + Math.sin(clock.elapsedTime * 3.2) * 0.06;
-      }
+    if (!mesh) return;
+    if (!hot) {
+      mesh.visible = false;
+      return;
     }
-    if (lcdRef.current) {
-      (lcdRef.current.material as MeshStandardMaterial).emissiveIntensity =
-        0.35 + Math.sin(clock.elapsedTime * 1.8) * 0.12 + (fan ? 0.15 : 0);
-    }
+    mesh.visible = true;
+    (mesh.material as MeshBasicMaterial).opacity =
+      0.1 + Math.sin(clock.elapsedTime * 3.2) * 0.06;
   });
 
   return (
@@ -618,7 +675,7 @@ function KitTower({ t, h, soil, cds, fan, rgb }: Props) {
       <Box args={[0.04, 2.7, 1.2]} position={[0.72, 0, 0]} color="#dceadf" opacity={0.3} roughness={0.15} />
       <Box args={[1.45, 0.04, 1.28]} position={[0, 1.36, 0]} color="#dceadf" opacity={0.35} roughness={0.15} />
 
-      <RgbStrip kind={rgb} />
+      <RgbStrip rgb={rgb} />
 
       <MidShelfAcrylic y={0.05} />
       <SquarePass position={[-0.52, 0.05, 0.12]} size={0.075} depth={0.055} />
@@ -627,13 +684,7 @@ function KitTower({ t, h, soil, cds, fan, rgb }: Props) {
       <HumidityMist level={h} />
       <AirflowParticles active={fan} boost={hot} />
 
-      <group position={[0, -0.55, 0.62]}>
-        <Box args={[0.85, 0.42, 0.06]} color="#1e293b" />
-        <mesh ref={lcdRef} position={[0, 0.02, 0.035]}>
-          <planeGeometry args={[0.72, 0.28]} />
-          <meshStandardMaterial color="#86efac" emissive="#22c55e" emissiveIntensity={0.5} />
-        </mesh>
-      </group>
+      <LcdScreen3D text={lcd} />
 
       <SensorBank t={t} soil={soil} cds={cds} />
 
@@ -759,6 +810,8 @@ export function HabitatScene3D(props: Props) {
   const tLabel = props.t === null ? "—" : `${props.t.toFixed(1)}°C`;
   const hLabel = props.h === null ? "—" : `${Math.round(props.h)}%`;
   const cdsLabel = props.cds === null ? "—" : `${Math.round(props.cds)}`;
+  const rgbLabel = `RGB(${props.rgb.r},${props.rgb.g},${props.rgb.b})`;
+  const lcdLabel = props.lcd.trim() ? props.lcd.slice(0, 16) : "LCD —";
 
   return (
     <div className={styles.habitat3d}>
@@ -785,7 +838,8 @@ export function HabitatScene3D(props: Props) {
         <span>습도 {hLabel}</span>
         <span>조도 {cdsLabel}</span>
         <span>팬 {props.fan ? "ON" : "off"}</span>
-        <span>RGB {props.rgb.toUpperCase()}</span>
+        <span>{rgbLabel}</span>
+        <span>{lcdLabel}</span>
         <span className={styles.habitatHint}>스크롤 줌 · 드래그 회전</span>
       </div>
     </div>

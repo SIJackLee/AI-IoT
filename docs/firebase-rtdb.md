@@ -38,12 +38,17 @@ ESP32  --HTTPS-->  Firebase RTDB  <--HTTPS--  PC 브라우저/Vercel
   "demo": "off",
   "auto": 0,
   "mode": "MANUAL",
+  "wifiFail": 0,
+  "httpFail": 0,
+  "resetReason": "POWERON",
+  "rebootN": 1,
   "ts": 1710000000
 }
 ```
 
 - `soil`은 ADC raw가 아니라 **`((4095 - raw) * 100) / 3000`** (% , 0–100, 건조≈0)
 - `auto` / `mode` 설명은 [`docs/auto-control.md`](./auto-control.md) 참고
+- `resetReason` / `rebootN` / 복구 정책은 [`docs/firmware-recovery.md`](./firmware-recovery.md) 참고
 
 ### command 예
 

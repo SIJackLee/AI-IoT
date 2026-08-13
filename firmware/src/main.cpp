@@ -5,6 +5,8 @@
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 #include <DHTesp.h>
+#include <esp_system.h>
+#include <esp_task_wdt.h>
 #include "secrets.h"
 
 static const int PIN_DHT = 4;
@@ -65,6 +67,22 @@ bool autoAlert = false;
 uint32_t autoFanMinOnUntil = 0;
 bool keyWasDown = false;
 
+// Phase A: 연속 실패 → 안전 종료 후 강제 리부팅
+uint8_t wifiFailN = 0;
+uint8_t httpFailN = 0;
+uint32_t wifiDownSince = 0;
+static const int WIFI_FAIL_REBOOT = 5;
+static const int HTTP_FAIL_REBOOT = 10;
+static const uint32_t WIFI_DOWN_REBOOT_MS = 120000;
+static const int WDT_TIMEOUT_S = 12;
+bool wdtReady = false;
+
+// Phase C: 부트 원인·리부팅 누적 (RTC — 전원 OFF면 초기화)
+static const uint32_t REBOOT_MAGIC = 0xA10C00B1u;
+RTC_DATA_ATTR uint32_t rebootMagic = 0;
+RTC_DATA_ATTR uint32_t rebootN = 0;
+esp_reset_reason_t lastResetReason = ESP_RST_UNKNOWN;
+
 static const int FAN_PWM_CH = 0;
 static const uint32_t LCD_QUIET_FAN_MS = 450;
 static const uint32_t LCD_QUIET_RGB_MS = 220;
@@ -109,6 +127,34 @@ const char* controlModeName() {
   return "MANUAL";
 }
 
+const char* resetReasonName(esp_reset_reason_t r) {
+  switch (r) {
+    case ESP_RST_POWERON: return "POWERON";
+    case ESP_RST_EXT: return "EXT";
+    case ESP_RST_SW: return "SW";
+    case ESP_RST_PANIC: return "PANIC";
+    case ESP_RST_INT_WDT: return "INT_WDT";
+    case ESP_RST_TASK_WDT: return "TASK_WDT";
+    case ESP_RST_WDT: return "WDT";
+    case ESP_RST_DEEPSLEEP: return "DEEPSLEEP";
+    case ESP_RST_BROWNOUT: return "BROWNOUT";
+    case ESP_RST_SDIO: return "SDIO";
+    default: return "OTHER";
+  }
+}
+
+void captureBootReason() {
+  lastResetReason = esp_reset_reason();
+  if (rebootMagic != REBOOT_MAGIC) {
+    rebootMagic = REBOOT_MAGIC;
+    rebootN = 0;
+  }
+  if (rebootN < 0xFFFFFFFFu) rebootN++;
+  Serial.printf("Boot reason=%s rebootN=%lu\n",
+                resetReasonName(lastResetReason),
+                (unsigned long)rebootN);
+}
+
 DemoMode parseDemo(const String& body) {
   int i = body.indexOf("\"demo\":\"");
   if (i < 0) return demoMode;
@@ -132,6 +178,22 @@ void noteLcdQuiet(uint32_t ms) {
 
 bool lcdIsQuiet() {
   return millis() < lcdQuietUntil;
+}
+
+void wdtFeed() {
+  if (wdtReady) {
+    esp_task_wdt_reset();
+  }
+}
+
+void wdtBegin() {
+  if (wdtReady) return;
+  // timeout(s), panic on trigger → 리셋
+  esp_task_wdt_init(WDT_TIMEOUT_S, true);
+  esp_task_wdt_add(NULL);
+  wdtReady = true;
+  esp_task_wdt_reset();
+  Serial.printf("Task WDT armed (%ds)\n", WDT_TIMEOUT_S);
 }
 
 void ensureFanPwm() {
@@ -176,12 +238,14 @@ void applyFan(int on) {
     for (int d = 32; d < 255; d += 32) {
       ledcWrite(FAN_PWM_CH, d);
       delay(18);
+      wdtFeed();
     }
     ledcWrite(FAN_PWM_CH, 255);
   } else {
     for (int d = 224; d >= 0; d -= 32) {
       ledcWrite(FAN_PWM_CH, d < 0 ? 0 : d);
       delay(12);
+      wdtFeed();
     }
     ledcWrite(FAN_PWM_CH, 0);
   }
@@ -373,6 +437,59 @@ void setDemoMode(DemoMode next) {
   Serial.printf("Demo => %s\n", demoName(demoMode));
 }
 
+void safeShutdown(const char* why) {
+  forceFanOff();
+  applyRgb(0, 0, 0);
+  buzzerOff();
+  if (demoMode != DEMO_OFF) {
+    demoMode = DEMO_OFF;
+    demoNeedsKick = false;
+    stopDemoOutputs();
+  }
+  if (autoMode) {
+    autoMode = false;
+    stopAutoOutputs();
+  }
+  String msg = String("REBOOT\n") + (why ? why : "FAIL");
+  setCustomLcd(msg);
+  Serial.printf("safeShutdown: %s\n", why ? why : "FAIL");
+}
+
+void escalateReboot(const char* why) {
+  Serial.printf("ESCALATE REBOOT: %s (wifiFail=%u httpFail=%u)\n",
+                why ? why : "FAIL", wifiFailN, httpFailN);
+  safeShutdown(why);
+  delay(400);
+  ESP.restart();
+}
+
+void noteWifiOk() {
+  wifiFailN = 0;
+  wifiDownSince = 0;
+}
+
+void noteWifiFail() {
+  if (wifiDownSince == 0) wifiDownSince = millis();
+  if (wifiFailN < 255) wifiFailN++;
+  Serial.printf("wifiFailN=%u\n", wifiFailN);
+  uint32_t downMs = (wifiDownSince == 0) ? 0 : (millis() - wifiDownSince);
+  if (wifiFailN >= WIFI_FAIL_REBOOT || downMs >= WIFI_DOWN_REBOOT_MS) {
+    escalateReboot("WIFI");
+  }
+}
+
+void noteHttpOk() {
+  httpFailN = 0;
+}
+
+void noteHttpFail() {
+  if (httpFailN < 255) httpFailN++;
+  Serial.printf("httpFailN=%u\n", httpFailN);
+  if (httpFailN >= HTTP_FAIL_REBOOT) {
+    escalateReboot("HTTP");
+  }
+}
+
 bool wifiConnect() {
   forceFanOff();
   WiFi.mode(WIFI_STA);
@@ -381,7 +498,9 @@ bool wifiConnect() {
   uint32_t t0 = millis();
   while (WiFi.status() != WL_CONNECTED && millis() - t0 < 25000) {
     forceFanOff();
+    wdtFeed();
     delay(400);
+    wdtFeed();
   }
   return WiFi.status() == WL_CONNECTED;
 }
@@ -391,12 +510,20 @@ bool firebasePut(const String& path, const String& json) {
   client.setInsecure();
   HTTPClient http;
   String url = basePath() + path + ".json" + authQuery();
-  if (!http.begin(client, url)) return false;
+  if (!http.begin(client, url)) {
+    noteHttpFail();
+    return false;
+  }
   http.addHeader("Content-Type", "application/json");
   int code = http.PUT(json);
   Serial.printf("PUT %s => %d\n", path.c_str(), code);
   http.end();
-  return code >= 200 && code < 300;
+  if (code >= 200 && code < 300) {
+    noteHttpOk();
+    return true;
+  }
+  noteHttpFail();
+  return false;
 }
 
 String firebaseGet(const String& path) {
@@ -404,12 +531,20 @@ String firebaseGet(const String& path) {
   client.setInsecure();
   HTTPClient http;
   String url = basePath() + path + ".json" + authQuery();
-  if (!http.begin(client, url)) return "";
+  if (!http.begin(client, url)) {
+    noteHttpFail();
+    return "";
+  }
   int code = http.GET();
   String body = (code >= 200 && code < 300) ? http.getString() : "";
   Serial.printf("GET %s => %d\n", path.c_str(), code);
   http.end();
-  return body;
+  if (code >= 200 && code < 300) {
+    noteHttpOk();
+    return body;
+  }
+  noteHttpFail();
+  return "";
 }
 
 int extractInt(const String& body, const char* key, int fallback = 0) {
@@ -600,12 +735,14 @@ void publishTelemetry() {
   int cds = analogRead(PIN_CDS);
   int key = digitalRead(PIN_KEY);
 
-  char buf[480];
+  char buf[560];
   snprintf(buf, sizeof(buf),
            "{\"t\":%.1f,\"h\":%.1f,\"soil\":%d,\"cds\":%d,"
            "\"fan\":%d,\"rgb\":{\"r\":%d,\"g\":%d,\"b\":%d},"
            "\"buzzer\":%d,\"key\":%d,\"demo\":\"%s\",\"auto\":%d,"
            "\"mode\":\"%s\",\"lcdCustom\":%s,"
+           "\"wifiFail\":%u,\"httpFail\":%u,"
+           "\"resetReason\":\"%s\",\"rebootN\":%lu,"
            "\"ip\":\"%s\",\"rssi\":%d,\"ts\":%lu}",
            t, h, soil, cds,
            fanState, rgbR, rgbG, rgbB,
@@ -614,13 +751,21 @@ void publishTelemetry() {
            autoMode ? 1 : 0,
            controlModeName(),
            lcdUserLock ? "true" : "false",
+           (unsigned)wifiFailN, (unsigned)httpFailN,
+           resetReasonName(lastResetReason),
+           (unsigned long)rebootN,
            WiFi.localIP().toString().c_str(),
            WiFi.RSSI(),
            (unsigned long)(millis() / 1000));
 
   firebasePut("/telemetry", String(buf));
-  firebasePut("/status",
-              String("{\"online\":true,\"ts\":") + String(millis() / 1000) + "}");
+  char st[160];
+  snprintf(st, sizeof(st),
+           "{\"online\":true,\"ts\":%lu,\"resetReason\":\"%s\",\"rebootN\":%lu}",
+           (unsigned long)(millis() / 1000),
+           resetReasonName(lastResetReason),
+           (unsigned long)rebootN);
+  firebasePut("/status", String(st));
 
   showSensorLcd();
 }
@@ -628,8 +773,10 @@ void publishTelemetry() {
 void setup() {
   Serial.begin(115200);
   delay(200);
+  captureBootReason();
 
   forceFanOff();
+  wdtBegin();
 
   pinMode(PIN_RGB_R, OUTPUT);
   pinMode(PIN_RGB_G, OUTPUT);
@@ -641,7 +788,14 @@ void setup() {
   Wire.begin(PIN_SDA, PIN_SCL);
   lcd.init();
   lcd.backlight();
-  setCustomLcd("Firebase RTDB\nBooting...");
+  {
+    char bootLcd[33];
+    snprintf(bootLcd, sizeof(bootLcd), "%s\nN%lu",
+             resetReasonName(lastResetReason),
+             (unsigned long)rebootN);
+    setCustomLcd(String(bootLcd));
+  }
+  wdtFeed();
 
   dht.setup(PIN_DHT, DHTesp::DHT11);
   analogReadResolution(12);
@@ -658,16 +812,19 @@ void setup() {
     return;
   }
   forceFanOff();
+  wdtFeed();
   Serial.printf("WiFi OK %s\n", WiFi.localIP().toString().c_str());
   setCustomLcd(String("WiFi OK\n") + WiFi.localIP().toString());
 
   firebasePut("/status", "{\"online\":true,\"boot\":true}");
+  wdtFeed();
   actuatorsReadyAt = millis() + 2500;
   lastCmdAt = 0;
   lastTelAt = 0;
 }
 
 void loop() {
+  wdtFeed();
   uint32_t now = millis();
 
   if (!actuatorsReady) {
@@ -679,6 +836,7 @@ void loop() {
       showSensorLcd();
     } else {
       delay(50);
+      wdtFeed();
       return;
     }
   }
@@ -689,17 +847,26 @@ void loop() {
     setAutoMode(false);
     actuatorsReady = false;
     actuatorsReadyAt = millis() + 2500;
-    wifiConnect();
+    if (!wifiConnect()) {
+      noteWifiFail();
+    } else {
+      noteWifiOk();
+    }
     delay(500);
+    wdtFeed();
     return;
   }
+
+  noteWifiOk();
 
   handleKeyToggle();
 
   // Firebase poll ~3s (non-blocking demo/auto continues between polls)
   if (now - lastCmdAt >= 3000) {
     lastCmdAt = now;
+    wdtFeed();
     String cmd = firebaseGet("/command");
+    wdtFeed();
     handleCommand(cmd);
   }
 
@@ -713,8 +880,11 @@ void loop() {
 
   if (now - lastTelAt >= 4000) {
     lastTelAt = now;
+    wdtFeed();
     publishTelemetry();
+    wdtFeed();
   }
 
   delay(40);
+  wdtFeed();
 }

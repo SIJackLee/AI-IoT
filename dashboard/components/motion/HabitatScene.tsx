@@ -12,7 +12,8 @@ type HabitatProps = {
   soil: number | null;
   cds: number | null;
   fan: boolean;
-  rgb: import("./rgb").RgbKind;
+  rgb: { r: number; g: number; b: number };
+  lcd: string;
 };
 
 const HabitatScene3D = dynamic(

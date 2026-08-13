@@ -271,7 +271,8 @@ export default function HomePage() {
               soil={data?.soil ?? null}
               cds={data?.cds ?? null}
               fan={fanOn}
-              rgb={rgbKind}
+              rgb={rgb}
+              lcd={lcdPreview === "(지움)" ? "" : lcdPreview}
             />
           </section>
 
