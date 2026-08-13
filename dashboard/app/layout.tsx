@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import "./globals.css";
@@ -6,6 +6,14 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "캠틱 AI-IoT 스마트팜",
   description: "캠틱 ESP32 스마트팜 Agri Motion 콘솔",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  viewportFit: "cover",
+  themeColor: "#e7efe6",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

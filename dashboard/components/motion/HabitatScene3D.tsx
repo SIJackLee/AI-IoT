@@ -1,7 +1,7 @@
 "use client";
 
-import { Component, useLayoutEffect, useMemo, useRef, type ReactNode } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Component, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import {
   CanvasTexture,
@@ -11,7 +11,10 @@ import {
   Path,
   Quaternion,
   Shape,
+  TOUCH,
   Vector3,
+  type AmbientLight,
+  type DirectionalLight,
   type Group,
   type Mesh,
   type MeshBasicMaterial,
@@ -1170,9 +1173,19 @@ function KitTower({ t, h, soil, cds, fan, rgb, lcd }: Props) {
   );
 }
 
-function HabitatWorld(props: Props) {
-  const amb = useRef<import("three").AmbientLight>(null);
-  const sun = useRef<import("three").DirectionalLight>(null);
+function HabitatWorld({ narrow, ...props }: Props & { narrow: boolean }) {
+  const amb = useRef<AmbientLight>(null);
+  const sun = useRef<DirectionalLight>(null);
+  const { camera } = useThree();
+
+  useEffect(() => {
+    if (narrow) {
+      camera.position.set(2.55, 1.35, 3.35);
+    } else {
+      camera.position.set(3.1, 1.55, 3.8);
+    }
+    camera.updateProjectionMatrix();
+  }, [narrow, camera]);
 
   useFrame(() => {
     const cds = props.cds;
@@ -1189,23 +1202,28 @@ function HabitatWorld(props: Props) {
       <directionalLight position={[-2.5, 2, -1.2]} intensity={0.35} color="#93c5c9" />
       <KitTower {...props} />
       <OrbitControls
-        enablePan
+        enablePan={!narrow}
         enableZoom
         enableRotate
-        zoomSpeed={0.85}
-        rotateSpeed={0.7}
+        zoomSpeed={narrow ? 0.7 : 0.85}
+        rotateSpeed={narrow ? 0.85 : 0.7}
         panSpeed={0.55}
-        minDistance={1.6}
-        maxDistance={9}
+        minDistance={narrow ? 2.0 : 1.6}
+        maxDistance={narrow ? 7 : 9}
         minPolarAngle={0.25}
         maxPolarAngle={Math.PI / 2.05}
         target={[0, 0.05, 0]}
+        touches={{
+          ONE: TOUCH.ROTATE,
+          TWO: TOUCH.DOLLY_PAN,
+        }}
       />
     </>
   );
 }
 
 export function HabitatScene3D(props: Props) {
+  const [narrow, setNarrow] = useState(false);
   const soilLabel = props.soil === null ? "—" : `${Math.round(props.soil)}%`;
   const tLabel = props.t === null ? "—" : `${props.t.toFixed(1)}°C`;
   const hLabel = props.h === null ? "—" : `${Math.round(props.h)}%`;
@@ -1213,23 +1231,31 @@ export function HabitatScene3D(props: Props) {
   const rgbLabel = `RGB(${props.rgb.r},${props.rgb.g},${props.rgb.b})`;
   const lcdLabel = props.lcd.trim() ? props.lcd.slice(0, 16) : "LCD —";
 
+  useEffect(() => {
+    const mql = window.matchMedia("(max-width: 900px)");
+    const sync = () => setNarrow(mql.matches);
+    sync();
+    mql.addEventListener("change", sync);
+    return () => mql.removeEventListener("change", sync);
+  }, []);
+
   return (
     <div className={styles.habitat3d}>
       <SceneErrorBoundary
         fallback={
           <div className={styles.habitat3dFallback}>
-            3D 로드 실패 · 센서 데이터는 옆 카드에서 확인
+            3D 로드 실패 · 센서 데이터는 아래 카드에서 확인
           </div>
         }
       >
         <Canvas
-          dpr={[1, 1.5]}
-          camera={{ position: [3.1, 1.55, 3.8], fov: 38, near: 0.1, far: 50 }}
-          gl={{ antialias: true, alpha: false }}
+          dpr={narrow ? [1, 1.25] : [1, 1.5]}
+          camera={{ position: [3.1, 1.55, 3.8], fov: narrow ? 42 : 38, near: 0.1, far: 50 }}
+          gl={{ antialias: !narrow, alpha: false, powerPreference: "high-performance" }}
           onCreated={({ gl }) => gl.setClearColor("#eef4ee")}
           style={{ touchAction: "none" }}
         >
-          <HabitatWorld {...props} />
+          <HabitatWorld {...props} narrow={narrow} />
         </Canvas>
       </SceneErrorBoundary>
       <div className={styles.habitatChips} aria-hidden>
@@ -1240,7 +1266,9 @@ export function HabitatScene3D(props: Props) {
         <span>팬 {props.fan ? "ON" : "off"}</span>
         <span>{rgbLabel}</span>
         <span>{lcdLabel}</span>
-        <span className={styles.habitatHint}>스크롤 줌 · 드래그 회전</span>
+        <span className={styles.habitatHint}>
+          {narrow ? "손가락 회전 · 핀치 줌" : "스크롤 줌 · 드래그 회전"}
+        </span>
       </div>
     </div>
   );

@@ -998,3 +998,32 @@
     transform: translateY(0);
   }
 }
+
+@media (max-width: 560px) {
+  .blockHead {
+    gap: 0.35rem;
+  }
+
+  .lcdControls {
+    gap: 0.45rem;
+  }
+
+  .lcdInput {
+    min-height: 46px;
+    font-size: 16px; /* iOS 줌 방지 */
+  }
+
+  .iconBtn {
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+  }
+
+  .rgbStage {
+    grid-template-columns: 1fr;
+  }
+
+  .autoToggle {
+    min-height: 48px;
+  }
+}

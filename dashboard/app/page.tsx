@@ -12,6 +12,7 @@ import {
 } from "recharts";
 import { ChevronLeft, ChevronRight, Bot, Power, SlidersHorizontal } from "lucide-react";
 import { fetchTelemetry, putCommand, type Command, type Telemetry } from "@/lib/firebase";
+import { useMediaQuery } from "@/lib/useMediaQuery";
 import { FanControl } from "@/components/FanControl";
 import { RgbPad } from "@/components/RgbPad";
 import { BuzzerPad } from "@/components/BuzzerPad";
@@ -63,6 +64,12 @@ export default function HomePage() {
   const [lcd, setLcd] = useState("캠틱 AI-IoT");
   const [lcdPreview, setLcdPreview] = useState("대기 중...");
   const [controlsOpen, setControlsOpen] = useState(true);
+  const isNarrow = useMediaQuery("(max-width: 900px)");
+  const isPhone = useMediaQuery("(max-width: 560px)");
+
+  useEffect(() => {
+    setControlsOpen(!window.matchMedia("(max-width: 900px)").matches);
+  }, []);
 
   const refresh = useCallback(async () => {
     try {
@@ -272,7 +279,13 @@ export default function HomePage() {
             <div className={styles.stageHead}>
               <div>
                 <h2>키트 타워 · 3D</h2>
-                <p className={styles.panelHint}>드래그 회전 · 스크롤 줌 · 우클릭 팬</p>
+                <p className={styles.panelHint}>
+                  {isPhone
+                    ? "한 손가락 회전 · 두 손가락 줌"
+                    : isNarrow
+                      ? "드래그 회전 · 핀치/스크롤 줌"
+                      : "드래그 회전 · 스크롤 줌 · 우클릭 팬"}
+                </p>
               </div>
               <span className={styles.liveTag}>Live</span>
             </div>
@@ -301,7 +314,9 @@ export default function HomePage() {
               <span className={styles.sideHandleIcon} aria-hidden>
                 <SlidersHorizontal size={16} strokeWidth={2.2} />
               </span>
-              <span className={styles.sideHandleLabel}>장치 제어</span>
+              <span className={styles.sideHandleLabel}>
+                {isNarrow ? (controlsOpen ? "장치 제어 닫기" : "장치 제어 열기") : "장치 제어"}
+              </span>
               <span className={styles.sideHandleChevron} aria-hidden>
                 {controlsOpen ? (
                   <ChevronRight size={18} strokeWidth={2.4} />

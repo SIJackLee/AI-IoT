@@ -37,6 +37,7 @@ html,
 body {
   margin: 0;
   min-height: 100%;
+  min-height: 100dvh;
   color: var(--text);
   font-family: var(--font-ko);
   letter-spacing: -0.01em;
@@ -47,6 +48,15 @@ body {
     linear-gradient(165deg, #f8fbf7 0%, var(--bg-0) 42%, var(--bg-1) 100%);
   background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
+  overflow-x: clip;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (max-width: 720px) {
+  html,
+  body {
+    background-attachment: scroll;
+  }
 }
 
 body::before {
